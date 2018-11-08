@@ -1,0 +1,42 @@
+#!/bin/bash
+# Send a request to the snooper
+# Usage:
+#   atrigger $action $input
+# 
+# The input is converted into a json object as follows:
+#   {'window': 'active', 'action': 'search|execute', 'input': 'TEXT-TO-USE'}
+#
+# In the case of execute/search, the input is treated as having been highlighted
+# and then clicked with button 2/3 respectively. In the case of punt, the input
+# is set as EDITOR before loading the requested window using the `vipe` command
+# from moreutils. This allows you to punt a particular edit to an alternate
+# editor and then reload the result back in the acme window. This is done without
+# modifying the on disk state of the file being edited.
+
+VALID_OPS="search execute"
+TERMINAL="tilix"
+
+if [ "$#" -ne 2 ]; then
+    (>&2 echo -e "Usage:\n  atrigger OP INPUT\n  OP must be one of '$VALID_OPS'")
+    exit 1
+fi
+
+OP=$1
+INPUT=$2
+
+if echo $VALID_OPS | grep -w $OP > /dev/null; then
+    if [ "$winid" != "" ]; then
+        DATA="{\"op\": \"$OP\", \"input\": \"$INPUT\", \"terminal\": \"$TERMINAL\", \"window\": $winid}"
+    else
+        DATA="{\"op\": \"$OP\", \"input\": \"$INPUT\", \"terminal\": \"$TERMINAL\"}"
+    fi
+
+    # Assume that we are running on port 1992
+    # TODO: Allow this to be configured?
+    curl -X POST --data "$DATA" --silent 127.0.0.1:1992
+else
+    (>&2 echo "ERROR: Action must be one of '$VALID_OPS'")
+    exit 1
+fi
+
+
