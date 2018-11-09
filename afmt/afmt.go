@@ -19,56 +19,70 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
+	"strings"
 
 	"9fans.net/go/acme"
 )
 
 // FTYPES lists the currently known filetypes for afmt
-var FTYPES = []FileType{python, golang, rust, shell, javascript, json}
+var FTYPES = []fileType{
+	python, golang, rust, shell, javascript, json,
+}
 
-// A Tool is a program that can rewrite source files or report
+// A tool is a program that can rewrite source files or report
 // on errors that were encountered in the code.
-type Tool struct {
-	Cmd            string
-	Args           []string
-	OutputFixer    func(string) string
-	RewritesSource bool
+type tool struct {
+	cmd         string
+	args        []string
+	outputFixer func(string) string
 }
 
 // TODO: copy the window body to a temp file, format it there and then
 //       reload it in the window body. Probably best to set up the temp
-//       file in FileType.reformat and then pass that in here?
+//       file in fileType.reformat and then pass that in here?
 //		 >> Look at how acmego does this
-func (t *Tool) reformat(e *acme.LogEvent) {
+func (t *tool) reformat(e *acme.LogEvent) {
+	var msg string
+
 	_, err := ioutil.ReadFile(e.Name)
 	if err != nil {
 		return
 	}
 
-	args := append(t.Args, e.Name)
-	output, err := exec.Command(t.Cmd, args...).CombinedOutput()
+	args := append(t.args, e.Name)
+	output, err := exec.Command(t.cmd, args...).CombinedOutput()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s error: %s\n", t.Cmd, err)
+		msg = err.Error()
+		if t.outputFixer != nil {
+			msg = t.outputFixer(msg)
+		}
+		fmt.Fprintf(os.Stderr, "%s error: %s\n", t.cmd, msg)
 	}
+
 	if output != nil {
-		fmt.Fprintf(os.Stdout, "%s: %s\n", t.Cmd, output)
+		if t.outputFixer != nil {
+			msg = fmt.Sprint(output)
+			msg = t.outputFixer(msg)
+		}
+		fmt.Fprintf(os.Stdout, "%s: %s\n", t.cmd, msg)
 	}
 }
 
-// A FileType defines a set of tools and an associated file type
+// A fileType defines a set of tools and an associated file type
 // to run them on. If the files support a unix shebang then we
 // try to parse that as well if the extension is missing.
-type FileType struct {
-	Extensions   []string
-	ShebangProgs []string
-	Tools        []Tool
+type fileType struct {
+	extensions   []string
+	shebangProgs []string
+	tools        []tool
 }
 
 // Check to see if this is a file we need to reformat
 // TODO: parse shebangs!
-func (f *FileType) matches(e *acme.LogEvent) bool {
+func (f *fileType) matches(e *acme.LogEvent) bool {
 	fileExtension := path.Ext(e.Name)
-	for _, ext := range f.Extensions {
+	for _, ext := range f.extensions {
 		if ext == fileExtension {
 			return true
 		}
@@ -78,7 +92,7 @@ func (f *FileType) matches(e *acme.LogEvent) bool {
 }
 
 // Apply all formatters to the underlying file
-func (f *FileType) reformat(e *acme.LogEvent) {
+func (f *fileType) reformat(e *acme.LogEvent) {
 	w, err := acme.Open(e.ID, nil)
 	if err != nil {
 		log.Print(err)
@@ -86,56 +100,65 @@ func (f *FileType) reformat(e *acme.LogEvent) {
 	}
 	defer w.CloseFiles()
 
-	for _, t := range f.Tools {
+	for _, t := range f.tools {
 		t.reformat(e)
 	}
 	w.Write("ctl", []byte("get"))
 }
 
-var python = FileType{
-	Extensions:   []string{"py", "pyw"},
-	ShebangProgs: []string{"python"},
-	Tools: []Tool{
-		Tool{Cmd: "isort", Args: []string{"-m", "5"}},
-		Tool{Cmd: "black"},
-		Tool{Cmd: "flake8"},
+var python = fileType{
+	extensions:   []string{"py", "pyw"},
+	shebangProgs: []string{"python"},
+	tools: []tool{
+		tool{cmd: "isort", args: []string{"-m", "5"}},
+		tool{cmd: "black"},
+		tool{cmd: "flake8"},
 	},
 }
 
-var golang = FileType{
-	Extensions: []string{"go"},
-	Tools: []Tool{
-		Tool{Cmd: "gofmt", Args: []string{"-w"}},
-		Tool{Cmd: "goimports", Args: []string{"-w"}},
-		Tool{Cmd: "go", Args: []string{"vet"}},
+var golang = fileType{
+	extensions: []string{"go"},
+	tools: []tool{
+		tool{cmd: "gofmt", args: []string{"-w"}},
+		tool{cmd: "goimports", args: []string{"-w"}},
+		tool{cmd: "go", args: []string{"vet"}},
 	},
 }
 
-var rust = FileType{
-	Extensions: []string{"rs"},
-	Tools:      []Tool{Tool{Cmd: "rustfmt"}},
+var rust = fileType{
+	extensions: []string{"rs"},
+	tools:      []tool{tool{cmd: "rustfmt"}},
 }
 
-var shell = FileType{
-	Extensions: []string{"sh", "bash", "zsh"},
-	Tools: []Tool{
+var shell = fileType{
+	extensions: []string{"sh", "bash", "zsh"},
+	tools: []tool{
 		// Remove trailing whitespace and whitespace only lines
-		Tool{Cmd: "sed", Args: []string{"-i", "'s/[[:blank:]]*$//g'"}},
-		Tool{Cmd: "shellcheck", Args: []string{"--color=never"}},
+		tool{cmd: "sed", args: []string{"-i", "'s/[[:blank:]]*$//g'"}},
+		tool{cmd: "shellcheck", args: []string{"--color=never"}},
 	},
 }
 
-var javascript = FileType{
-	Extensions: []string{"js"},
-	Tools: []Tool{
-		Tool{Cmd: "js-beautify", Args: []string{"-r"}},
-		Tool{Cmd: "jshint"},
+var javascript = fileType{
+	extensions: []string{"js"},
+	tools: []tool{
+		tool{cmd: "js-beautify", args: []string{"-r"}},
+		tool{
+			cmd: "jshint",
+			outputFixer: func(s string) string {
+				// Convert to button3 friendly output
+				s = strings.Replace(s, " line ", "", -1)
+				// Remove the column number as it just adds line noise
+				re := regexp.MustCompile(", col .*,")
+				return re.ReplaceAllString(s, " ->")
+			},
+		},
 	},
 }
 
-var json = FileType{
-	Extensions: []string{"json"},
-	Tools:      []Tool{Tool{Cmd: "json-format"}},
+var json = fileType{
+	extensions: []string{"json"},
+	tools:      []tool{tool{cmd: "json-format"}},
 }
 
 func main() {
