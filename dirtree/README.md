@@ -42,5 +42,9 @@ style (in case you want to do file operations with the listing).
 - Attempting to click on any user entered text in the window will most likely
   cause a crash.
 
+- Spaces in file names _sometimes_ causes the plumber to fail...not sure why!
+
+- Some files refuse to open (again, not sure why yet...)
+
 - The entire tree is redrawn on each expansion / collapse of a node. If you have
   expanded a lot of nodes then you will see some noticeable redraw.

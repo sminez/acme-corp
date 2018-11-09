@@ -1,4 +1,4 @@
-// acmefmt watches acme for know file extensions on files
+// afmt watches acme for know file extensions on files
 // being written inside acme. Each time a known file is written,
 // it runs the appropriate tool and reloads the file in acme.
 //
@@ -10,7 +10,6 @@
 //		 Add: Rust, HTML, CSS, JS, Java, Kotlin, Shell
 // TODO: Rewrite this to modify the _window_ body rather than the underlying
 //		 files. Would this also require a check that we had been idempotent?
-// TODO: Make URLs part of the tool struct and use this to install them? (maybe not...)
 package main
 
 import (
@@ -19,10 +18,13 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strings"
+	"path"
 
 	"9fans.net/go/acme"
 )
+
+// FTYPES lists the currently known filetypes for afmt
+var FTYPES = []FileType{python, golang, rust, shell, javascript, json}
 
 // A Tool is a program that can rewrite source files or report
 // on errors that were encountered in the code.
@@ -65,8 +67,9 @@ type FileType struct {
 // Check to see if this is a file we need to reformat
 // TODO: parse shebangs!
 func (f *FileType) matches(e *acme.LogEvent) bool {
+	fileExtension := path.Ext(e.Name)
 	for _, ext := range f.Extensions {
-		if strings.HasSuffix(e.Name, ext) {
+		if ext == fileExtension {
 			return true
 		}
 		// if shebang is correct, return true
@@ -89,54 +92,53 @@ func (f *FileType) reformat(e *acme.LogEvent) {
 	w.Write("ctl", []byte("get"))
 }
 
-// Python external tooling for acme.
-// automatic import ordering and grouping with isort, overall formatting
-// with black and then syntax and style linting with flake8
-var Python = FileType{
+var python = FileType{
 	Extensions:   []string{"py", "pyw"},
 	ShebangProgs: []string{"python"},
 	Tools: []Tool{
-		Tool{
-			Cmd:  "isort", // https://github.com/timothycrosley/isort
-			Args: []string{"-m", "5"},
-		},
-		Tool{
-			Cmd:  "black", // https://github.com/ambv/black
-			Args: []string{""},
-		},
-		Tool{
-			Cmd:  "flake8", // https://gitlab.com/pycqa/flake8
-			Args: []string{""},
-		},
+		Tool{Cmd: "isort", Args: []string{"-m", "5"}},
+		Tool{Cmd: "black"},
+		Tool{Cmd: "flake8"},
 	},
 }
 
-// Golang external tooling for acme.
-// Overall formatting with gofmt, import management with goimports
-// and linting for common errors with govet.
-var Golang = FileType{
-	Extensions:   []string{"go"},
-	ShebangProgs: []string{""},
+var golang = FileType{
+	Extensions: []string{"go"},
 	Tools: []Tool{
-		Tool{
-			Cmd:  "gofmt", // https://golang.org/cmd/gofmt/
-			Args: []string{"-w"},
-		},
-		Tool{
-			Cmd:  "goimports", // https://godoc.org/golang.org/x/tools/cmd/goimports
-			Args: []string{"-w"},
-		},
-		Tool{
-			Cmd:  "go", // https://godoc.org/golang.org/x/tools/cmd/govet
-			Args: []string{"vet"},
-		},
+		Tool{Cmd: "gofmt", Args: []string{"-w"}},
+		Tool{Cmd: "goimports", Args: []string{"-w"}},
+		Tool{Cmd: "go", Args: []string{"vet"}},
 	},
 }
 
-// WatchAndFix is intended to be run in it's own goroutine or as a stand alone
-// main function. It watches the acme event log for know file types being saved
-// and then runs the provided external tools over the window content.
-func WatchAndFix(fileTypes []FileType) {
+var rust = FileType{
+	Extensions: []string{"rs"},
+	Tools:      []Tool{Tool{Cmd: "rustfmt"}},
+}
+
+var shell = FileType{
+	Extensions: []string{"sh", "bash", "zsh"},
+	Tools: []Tool{
+		// Remove trailing whitespace and whitespace only lines
+		Tool{Cmd: "sed", Args: []string{"-i", "'s/[[:blank:]]*$//g'"}},
+		Tool{Cmd: "shellcheck", Args: []string{"--color=never"}},
+	},
+}
+
+var javascript = FileType{
+	Extensions: []string{"js"},
+	Tools: []Tool{
+		Tool{Cmd: "js-beautify", Args: []string{"-r"}},
+		Tool{Cmd: "jshint"},
+	},
+}
+
+var json = FileType{
+	Extensions: []string{"json"},
+	Tools:      []Tool{Tool{Cmd: "json-format"}},
+}
+
+func main() {
 	l, err := acme.Log()
 	if err != nil {
 		log.Fatal(err)
@@ -150,16 +152,11 @@ func WatchAndFix(fileTypes []FileType) {
 
 		// On window save, run any tools we know about
 		if event.Name != "" && event.Op == "put" {
-			for _, ft := range fileTypes {
+			for _, ft := range FTYPES {
 				if ft.matches(&event) {
 					ft.reformat(&event)
 				}
 			}
 		}
 	}
-}
-
-func main() {
-	// TODO: add flag for whether or not we should format
-	WatchAndFix([]FileType{Python, Golang})
 }

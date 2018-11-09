@@ -99,6 +99,10 @@ func newFileTree(root string) *fileTree {
 	return &f
 }
 
+func escapePath(path string) string {
+	return strings.Replace(path, " ", "\\ ", -1)
+}
+
 func getNodes(root string, depth int) ([]*node, error) {
 	fileInfo, err := ioutil.ReadDir(root)
 	if err != nil {
@@ -269,7 +273,7 @@ func (f *fileTree) runEventLoop() {
 					Dst:  "",
 					Dir:  "/",
 					Type: "text",
-					Data: []byte(node.fullPath),
+					Data: []byte(escapePath(node.fullPath)),
 				}
 
 				if err := msg.Send(port); err != nil {
