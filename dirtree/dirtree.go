@@ -7,6 +7,10 @@
 // to it. See http://sam.cat-v.org/cheatsheet/ for a quick cheatsheet
 // and look at http://doc.cat-v.org/bell_labs/structural_regexps/se.pdf
 // for more on structural regular expressions.
+//
+// TODO: Only delete / insert the text that has changed as the result of
+//       a user action. Probably would also want a `reset` action as well
+//       in case the user messed up the state of the window.
 package main
 
 import (
@@ -132,10 +136,10 @@ func (n *node) String() string {
 
 	prefix := FILE
 	if n.isDir {
+		prefix = DIRCOLLAPSED
+
 		if n.isExpanded {
 			prefix = DIREXPANDED
-		} else {
-			prefix = DIRCOLLAPSED
 		}
 	}
 
@@ -159,26 +163,48 @@ func (n *node) String() string {
 	return s
 }
 
+// Send the filename to the plumber for opening. Depending on the filename
+// this can still fail to open but at that point it is the responsibility
+// of the user to write an appropriate plumbing rule.
+func (n *node) plumb() error {
+	port, err := plumb.Open("send", plan9.OWRITE)
+	if err != nil {
+		return err
+	}
+	defer port.Close()
+
+	msg := &plumb.Message{
+		Src:  "dirtree",
+		Dst:  "",
+		Dir:  "/",
+		Type: "text",
+		Data: []byte(escapePath(n.fullPath)),
+	}
+
+	return msg.Send(port)
+}
+
 // We clear/refetch the nodes on expand/collapse in order to allow
 // the user to refresh the contents of a directory if, for example,
 // they have created a new file.
-func (n *node) toggle(f *fileTree) {
+func (f *fileTree) toggleDirectory(n *node) {
 	if n.isExpanded {
 		n.isExpanded = false
 		for _, child := range n.contents {
 			delete(f.nodeMap, child.fullPath)
 		}
 		n.contents = []*node{}
-	} else {
-		var err error
-		n.isExpanded = true
-		n.contents, err = getNodes(n.fullPath, n.depth+1)
-		if err != nil {
-			f.w.Write("error", []byte(err.Error()))
-			return
-		}
-		f.registerNodes(n.contents)
+		return
 	}
+
+	var err error
+	n.isExpanded = true
+	n.contents, err = getNodes(n.fullPath, n.depth+1)
+	if err != nil {
+		f.w.Write("error", []byte(err.Error()))
+		return
+	}
+	f.registerNodes(n.contents)
 }
 
 func (f *fileTree) String() string {
@@ -251,37 +277,25 @@ func (f *fileTree) runEventLoop() {
 				continue
 			}
 
-			node := f.nodeMap[path]
-			if node == nil {
-				// Try to let the plumber handle it
+			n, ok := f.nodeMap[path]
+			if !ok {
+				// The path we generated didn't map to a known node so
+				// this is most likely user entered text. Rather than
+				// bail, see if acme knows what to do with it.
 				win.WriteEvent(e)
 				continue
 			}
 
-			if node.isDir {
-				node.toggle(f)
-			} else {
-				port, err := plumb.Open("send", plan9.OWRITE)
-				if err != nil {
-					f.w.Write("error", []byte(err.Error()))
-					return
-				}
-				defer port.Close()
-
-				msg := &plumb.Message{
-					Src:  "dirtree",
-					Dst:  "",
-					Dir:  "/",
-					Type: "text",
-					Data: []byte(escapePath(node.fullPath)),
-				}
-
-				if err := msg.Send(port); err != nil {
-					f.w.Write("error", []byte(err.Error()))
-				}
+			if n.isDir {
+				f.toggleDirectory(n)
+				f.redraw(e)
+				continue
 			}
 
-			f.redraw(e)
+			err = n.plumb()
+			if err != nil {
+				win.Write("error", []byte(err.Error()))
+			}
 
 		case 'X':
 			// middle click in body
