@@ -27,7 +27,6 @@ import (
 	"9fans.net/go/plumb"
 )
 
-// Formatters for laying out the directory tree
 const (
 	INDENT       = "  "
 	DIRCOLLAPSED = "+ "
@@ -37,7 +36,6 @@ const (
 	SEPSIZE      = 2
 )
 
-// Represents a node in the filesystem (directory or file)
 type node struct {
 	name       string
 	fullPath   string
@@ -48,7 +46,6 @@ type node struct {
 	contents   []*node
 }
 
-// The overall tree structure
 type fileTree struct {
 	w          *acme.Win
 	root       string
@@ -88,7 +85,6 @@ func showUsage() {
 	os.Exit(2)
 }
 
-// Set up a new dirtree window
 func newFileTree(root string) *fileTree {
 	f := fileTree{
 		root:       root,
