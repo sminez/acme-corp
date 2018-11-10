@@ -15,7 +15,7 @@ then
     if [[ "$@" == *\?\? ]]
     then
       if [ -d "${QUERY%\/* \?\?}" ]; then
-        coproc ( xplor "${QUERY%\/* \?\?}"  > /dev/null 2>&1 )
+        coproc ( dirtree "${QUERY%\/* \?\?}"  > /dev/null 2>&1 )
       else
         coproc ( editinacme "${QUERY%\/* \?\?}"  > /dev/null 2>&1 )
       fi
@@ -25,7 +25,7 @@ then
 
     else
       if [ -d "$@" ]; then
-        coproc ( xplor "$@"  > /dev/null 2>&1 )
+        coproc ( dirtree "$@"  > /dev/null 2>&1 )
       else
         coproc ( editinacme "$@"  > /dev/null 2>&1 )
       fi
