@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# Ask snooper for the current focused window. To stay consistant
+# with the error case when snooper is running, we return -1 if we
+# were unable to determine the current window ID.
+id=$(curl -s 127.0.0.1:1992/active)
+
+if [ "$?" -ne 0 ]; then
+    echo -1
+    exit 1
+fi
+
+echo "$id"

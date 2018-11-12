@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# Start the acme text editor and some related helper utilities
+pgrep plumber || plumber &
+acme &
+sleep 1  # wait for acme to come up
+snoop-acme &

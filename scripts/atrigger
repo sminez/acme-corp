@@ -13,8 +13,7 @@
 # editor and then reload the result back in the acme window. This is done without
 # modifying the on disk state of the file being edited.
 
-VALID_OPS="search execute"
-TERMINAL="tilix"
+VALID_OPS="execute"
 
 if [ "$#" -ne 2 ]; then
     (>&2 echo -e "Usage:\n  atrigger OP INPUT\n  OP must be one of '$VALID_OPS'")
