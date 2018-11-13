@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"9fans.net/go/acme"
+	"github.com/sminez/acme-corp/afmt"
 )
 
 const (
@@ -74,6 +75,16 @@ func (a *AcmeSnooper) snoop(chSignals chan os.Signal) {
 
 			case "focus":
 				a.activeWindow = e.ID
+
+			case "put":
+				if e.Name == "" {
+					continue
+				}
+				for _, ft := range afmt.FTYPES {
+					if ft.matches(&e) {
+						ft.reformat(&e)
+					}
+				}
 
 			default:
 				// log.Printf("%s: %v\n", e.Op, e)

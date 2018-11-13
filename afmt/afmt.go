@@ -1,4 +1,4 @@
-// afmt watches acme for know file extensions on files
+// Package afmt watches acme for know file extensions on files
 // being written inside acme. Each time a known file is written,
 // it runs the appropriate tool and reloads the file in acme.
 //
@@ -7,10 +7,10 @@
 // TODO: Parse file shebangs to determine filetype as a fallback.
 //		 Look at https://godoc.org/golang.org/x/tools for more go tools
 //	       - go fix, go guru
-//		 Add: Rust, HTML, CSS, JS, Java, Kotlin, Shell
+//		 Add: HTML, CSS, Java, Kotlin
 // TODO: Rewrite this to modify the _window_ body rather than the underlying
 //		 files. Would this also require a check that we had been idempotent?
-package main
+package afmt
 
 import (
 	"fmt"
