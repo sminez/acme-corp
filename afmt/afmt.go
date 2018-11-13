@@ -33,9 +33,10 @@ var FTYPES = []fileType{
 // A tool is a program that can rewrite source files or report
 // on errors that were encountered in the code.
 type tool struct {
-	cmd         string
-	args        []string
-	outputFixer func(string) string
+	cmd          string
+	args         []string
+	outputFixer  func(string) string
+	ignoreOutput bool
 }
 
 // TODO: copy the window body to a temp file, format it there and then
@@ -60,9 +61,13 @@ func (t *tool) reformat(e *acme.LogEvent) {
 		fmt.Fprintf(os.Stderr, "%s error: %s\n", t.cmd, msg)
 	}
 
-	if output != nil {
+	if t.ignoreOutput {
+		return
+	}
+
+	if len(output) > 0 {
+		msg = fmt.Sprint(string(output))
 		if t.outputFixer != nil {
-			msg = fmt.Sprint(output)
 			msg = t.outputFixer(msg)
 		}
 		fmt.Fprintf(os.Stdout, "%s: %s\n", t.cmd, msg)
@@ -83,7 +88,8 @@ type fileType struct {
 func (f *fileType) matches(e *acme.LogEvent) bool {
 	fileExtension := path.Ext(e.Name)
 	for _, ext := range f.extensions {
-		if ext == fileExtension {
+		// remove the .
+		if ext == fileExtension[1:] {
 			return true
 		}
 		// if shebang is correct, return true
@@ -110,9 +116,14 @@ var python = fileType{
 	extensions:   []string{"py", "pyw"},
 	shebangProgs: []string{"python"},
 	tools: []tool{
-		tool{cmd: "isort", args: []string{"-m", "5"}},
-		tool{cmd: "black"},
-		tool{cmd: "flake8"},
+		tool{
+			cmd:          "isort",
+			args:         []string{"-m", "5"},
+			ignoreOutput: true,
+		},
+		tool{cmd: "black", args: []string{"-q", "--line-length", "100"}},
+		// Black is pep8 compliant but flake8 is not...
+		tool{cmd: "flake8", args: []string{"--ignore=E203,W503"}},
 	},
 }
 
