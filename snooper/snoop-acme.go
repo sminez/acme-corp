@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -38,6 +39,7 @@ type AcmeSnooper struct {
 	activeWindow    int // acme window ID
 	chTriggerEvents chan TriggerEvent
 	chLogEvents     chan acme.LogEvent
+	formatOn        bool
 }
 
 // NewAcmeSnooper inits an acme snooper and kicks off its HTTP server
@@ -54,6 +56,9 @@ func NewAcmeSnooper() *AcmeSnooper {
 func (a *AcmeSnooper) snoop(chSignals chan os.Signal) {
 	go a.tailLog()
 	go a.serveHTTP()
+
+	args := []string{"'acme snooper: Running'"}
+	exec.Command("notify-send", args...).CombinedOutput()
 
 	for {
 		select {
@@ -77,12 +82,13 @@ func (a *AcmeSnooper) snoop(chSignals chan os.Signal) {
 				a.activeWindow = e.ID
 
 			case "put":
-				if e.Name == "" {
+				if e.Name == "" || !a.formatOn {
 					continue
 				}
+
 				for _, ft := range afmt.FTYPES {
-					if ft.matches(&e) {
-						ft.reformat(&e)
+					if ft.Matches(&e) {
+						ft.Reformat(&e)
 					}
 				}
 
@@ -98,6 +104,7 @@ func (a *AcmeSnooper) snoop(chSignals chan os.Signal) {
 
 func (a *AcmeSnooper) serveHTTP() {
 	http.HandleFunc("/", a.triggerHandler)
+	http.HandleFunc("/fmt", a.fmtHandler)
 	http.HandleFunc("/active", a.activeHandler)
 
 	port := fmt.Sprintf(":%s", triggerPort)
@@ -128,6 +135,30 @@ func (a *AcmeSnooper) triggerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.chTriggerEvents <- t
+}
+
+func (a *AcmeSnooper) fmtHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(w, "Unable to read data from POST body: %s\n", err)
+		return
+	}
+
+	switch string(body) {
+	case "1":
+		a.formatOn = true
+		args := []string{"'acme format on save: on'"}
+		exec.Command("notify-send", args...).CombinedOutput()
+
+	case "0":
+		a.formatOn = false
+		args := []string{"'acme format on save: off'"}
+		exec.Command("notify-send", args...).CombinedOutput()
+
+	default:
+		fmt.Fprintf(w, "Invalid fmt flag: '%s'. Should be 0/1\n", body)
+	}
+
 }
 
 func (a *AcmeSnooper) activeHandler(w http.ResponseWriter, r *http.Request) {

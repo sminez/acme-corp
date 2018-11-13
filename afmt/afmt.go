@@ -1,13 +1,9 @@
 // Package afmt watches acme for know file extensions on files
 // being written inside acme. Each time a known file is written,
-// it runs the appropriate tool and reloads the file in acme.
+// it runs the appropriate Tool and reloads the file in acme.
 //
 // NOTE: This will _not_ run for files without the correct file extension
 //       For example, python scripts without a .py
-// TODO: Parse file shebangs to determine filetype as a fallback.
-//		 Look at https://godoc.org/golang.org/x/tools for more go tools
-//	       - go fix, go guru
-//		 Add: HTML, CSS, Java, Kotlin
 // TODO: Rewrite this to modify the _window_ body rather than the underlying
 //		 files. Would this also require a check that we had been idempotent?
 package afmt
@@ -19,20 +15,13 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
-	"strings"
 
 	"9fans.net/go/acme"
 )
 
-// FTYPES lists the currently known filetypes for afmt
-var FTYPES = []fileType{
-	python, golang, rust, shell, javascript, json,
-}
-
-// A tool is a program that can rewrite source files or report
+// A Tool is a program that can rewrite source files or report
 // on errors that were encountered in the code.
-type tool struct {
+type Tool struct {
 	cmd          string
 	args         []string
 	outputFixer  func(string) string
@@ -41,9 +30,9 @@ type tool struct {
 
 // TODO: copy the window body to a temp file, format it there and then
 //       reload it in the window body. Probably best to set up the temp
-//       file in fileType.reformat and then pass that in here?
+//       file in FileType.Reformat and then pass that in here?
 //		 >> Look at how acmego does this
-func (t *tool) reformat(e *acme.LogEvent) {
+func (t *Tool) reformat(e *acme.LogEvent) {
 	var msg string
 
 	_, err := ioutil.ReadFile(e.Name)
@@ -74,18 +63,18 @@ func (t *tool) reformat(e *acme.LogEvent) {
 	}
 }
 
-// A fileType defines a set of tools and an associated file type
+// A FileType defines a set of Tools and an associated file type
 // to run them on. If the files support a unix shebang then we
 // try to parse that as well if the extension is missing.
-type fileType struct {
+type FileType struct {
 	extensions   []string
 	shebangProgs []string
-	tools        []tool
+	Tools        []Tool
 }
 
-// Check to see if this is a file we need to reformat
+// Matches checks to see if this is a file we need to reformat
 // TODO: parse shebangs!
-func (f *fileType) matches(e *acme.LogEvent) bool {
+func (f *FileType) Matches(e *acme.LogEvent) bool {
 	fileExtension := path.Ext(e.Name)
 	for _, ext := range f.extensions {
 		// remove the .
@@ -97,8 +86,8 @@ func (f *fileType) matches(e *acme.LogEvent) bool {
 	return false
 }
 
-// Apply all formatters to the underlying file
-func (f *fileType) reformat(e *acme.LogEvent) {
+// Reformat applies all known formatters to the underlying file
+func (f *FileType) Reformat(e *acme.LogEvent) {
 	w, err := acme.Open(e.ID, nil)
 	if err != nil {
 		log.Print(err)
@@ -106,73 +95,14 @@ func (f *fileType) reformat(e *acme.LogEvent) {
 	}
 	defer w.CloseFiles()
 
-	for _, t := range f.tools {
+	for _, t := range f.Tools {
 		t.reformat(e)
 	}
 	w.Write("ctl", []byte("get"))
 }
 
-var python = fileType{
-	extensions:   []string{"py", "pyw"},
-	shebangProgs: []string{"python"},
-	tools: []tool{
-		tool{
-			cmd:          "isort",
-			args:         []string{"-m", "5"},
-			ignoreOutput: true,
-		},
-		tool{cmd: "black", args: []string{"-q", "--line-length", "100"}},
-		// Black is pep8 compliant but flake8 is not...
-		tool{cmd: "flake8", args: []string{"--ignore=E203,W503"}},
-	},
-}
-
-var golang = fileType{
-	extensions: []string{"go"},
-	tools: []tool{
-		tool{cmd: "gofmt", args: []string{"-w"}},
-		tool{cmd: "goimports", args: []string{"-w"}},
-		tool{cmd: "go", args: []string{"vet"}},
-	},
-}
-
-var rust = fileType{
-	extensions: []string{"rs"},
-	tools:      []tool{tool{cmd: "rustfmt"}},
-}
-
-var shell = fileType{
-	extensions: []string{"sh", "bash", "zsh"},
-	tools: []tool{
-		// Remove trailing whitespace and whitespace only lines
-		tool{cmd: "sed", args: []string{"-i", "'s/[[:blank:]]*$//g'"}},
-		tool{cmd: "shellcheck", args: []string{"--color=never"}},
-	},
-}
-
-var javascript = fileType{
-	extensions: []string{"js"},
-	tools: []tool{
-		tool{cmd: "js-beautify", args: []string{"-r"}},
-		tool{
-			cmd: "jshint",
-			outputFixer: func(s string) string {
-				// Convert to button3 friendly output
-				s = strings.Replace(s, " line ", "", -1)
-				// Remove the column number as it just adds line noise
-				re := regexp.MustCompile(", col .*,")
-				return re.ReplaceAllString(s, " ->")
-			},
-		},
-	},
-}
-
-var json = fileType{
-	extensions: []string{"json"},
-	tools:      []tool{tool{cmd: "json-format"}},
-}
-
-func main() {
+// WatchAndFormat is an example event loop using afmt
+func WatchAndFormat() {
 	l, err := acme.Log()
 	if err != nil {
 		log.Fatal(err)
@@ -187,8 +117,8 @@ func main() {
 		// On window save, run any tools we know about
 		if event.Name != "" && event.Op == "put" {
 			for _, ft := range FTYPES {
-				if ft.matches(&event) {
-					ft.reformat(&event)
+				if ft.Matches(&event) {
+					ft.Reformat(&event)
 				}
 			}
 		}

@@ -1,0 +1,4 @@
+#!/bin/bash
+#
+# Turn autoformating off
+curl -s -X POST -d 0 127.0.0.1:1992/fmt
