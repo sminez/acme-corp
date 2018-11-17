@@ -1,0 +1,5 @@
+#!/bin/bash
+#
+# use the astyle tool to format my c code
+astyle --style=kr --indent=tab < "$1" > out.c
+mv out.c "$1"

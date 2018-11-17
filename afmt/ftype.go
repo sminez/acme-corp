@@ -12,7 +12,7 @@ import (
 
 // FTYPES lists the currently known filetypes for afmt
 var FTYPES = []FileType{
-	python, golang, rust, shell, javascript, json,
+	python, golang, rust, shell, javascript, json, c,
 }
 
 var python = FileType{
@@ -73,4 +73,18 @@ var javascript = FileType{
 var json = FileType{
 	extensions: []string{"json"},
 	Tools:      []Tool{Tool{cmd: "json-format"}},
+}
+
+var c = FileType{
+	extensions: []string{"c", "h"},
+	Tools: []Tool{
+		Tool{cmd: "c-astyle"},
+		Tool{
+			cmd: "splint",
+			args: []string{
+				"+charintliteral", "+charint", "-exportlocal", "-compdef",
+				"-usedef", "-retvalint", "+relaxtypes",
+			},
+		},
+	},
 }
