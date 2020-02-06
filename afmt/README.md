@@ -21,7 +21,7 @@ appropriate formatters are run on the window contents.
   - [Rustfmt](https://github.com/rust-lang-nursery/rustfmt)
 
 - Shell
-  - Use [sed](https://en.wikipedia.org/wiki/Sed) to remove trailing whitespace. 
+  - Use [sed](https://en.wikipedia.org/wiki/Sed) to remove trailing whitespace.
   - [shellcheck](https://github.com/koalaman/shellcheck)
 
 - Javascript
@@ -31,7 +31,14 @@ appropriate formatters are run on the window contents.
 - JSON
   - [python json.tool](https://docs.python.org/3.7/library/json.html#module-json.tool) [wrapper script](https://github.com/sminez/acme-corp/tree/master/scripts/json-format)
 
-##### TODO
+#### TODO
 - Java
 - Kotlin
 - Haskell
+- Switch JS formatting to prettier and also run for typescript files.
+
+### Bugs / current limitations
+- Linter output ends up in the terminal that 'start-acme' was run from,
+  not in the acme '+errors' window which makes more sense.
+- Linter failures can sometimes crash the snooper it seems... (not sure
+  if this really is the cause or if it is something else though)

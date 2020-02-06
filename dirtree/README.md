@@ -38,13 +38,13 @@ style (in case you want to do file operations with the listing).
 - The indentation of each item is used to parse out the absolute file path of
   the text that was clicked on. Editing the indentation will break the parser
   and result in dirtree crashing.
-
-- Attempting to click on any user entered text in the window will most likely
-  cause a crash.
-
 - Spaces in file names _sometimes_ causes the plumber to fail...not sure why!
-
 - Some files refuse to open (again, not sure why yet...)
-
 - The entire tree is redrawn on each expansion / collapse of a node. If you have
   expanded a lot of nodes then you will see some noticeable redraw.
+
+
+### TODO
+- Add a redraw command to pull in any file changes we have made
+- Add a way to create / rename / manage files in general without
+  needing to punt to 'win'
