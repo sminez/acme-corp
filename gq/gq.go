@@ -27,9 +27,8 @@ func maximalPrefix(lines []string, allowAlphaNumeric bool) string {
 	first := lines[0]
 	prefix := ""
 
-	if !allowAlphaNumeric {
+	if allowAlphaNumeric {
 		k = len(first)
-
 	} else {
 		k = 0
 		for _, c := range first {

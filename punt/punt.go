@@ -28,14 +28,14 @@ import (
 )
 
 var (
-	terminal      = "tilix"
+	terminal      = "st"
 	defaultEditor = "nvim"
 	tmpName       = "acme-punt"
+	isGUI         = flag.Bool("g", false, "The called program is a GUI")
 )
 
 // Default to `defaultEditor` running in `terminal` or use the user provided details
 func parseArgs() (string, bool) {
-	isGUI := flag.Bool("g", false, "The called program is a GUI")
 	flag.Parse()
 	args := flag.Args()
 

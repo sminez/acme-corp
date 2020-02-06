@@ -37,7 +37,7 @@ appropriate formatters are run on the window contents.
 - Haskell
 - Switch JS formatting to prettier and also run for typescript files.
 
-### Bugs / current limitations
+### Known bugs / current limitations
 - Linter output ends up in the terminal that 'start-acme' was run from,
   not in the acme '+errors' window which makes more sense.
 - Linter failures can sometimes crash the snooper it seems... (not sure
