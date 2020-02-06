@@ -37,3 +37,6 @@ written:
   this Edit command" pop up working ASAP: a lot of my edits in vim are done
   using `:%s/.../.../g` so if I can get a replacement for that which I'm happy
   with I'll be a very happy Glenda.
+
+  [0]: https://github.com/junegunn/fzf
+  [1]: https://github.com/mfaerevaag/wd
