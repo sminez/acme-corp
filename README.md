@@ -25,7 +25,13 @@ Editing session management and coordination happens through acme. Why? Because
 of the amazing power it gives to plain text.
 
 
-  [0]: http://acme.cat-v.org/ 
+### This sounds overly complicated...
+Yeah. It is. I'm working on something on the side to make this a bit easier to
+work with as a dail driver but overall I like acme for day to day 'session
+management'.
+
+
+  [0]: http://acme.cat-v.org/
   [1]: https://9p.io/plan9/
   [2]: https://9fans.github.io/plan9port/
   [3]: https://github.com/sminez/plan9port
