@@ -1,4 +1,4 @@
-package afmt
+package snoop
 
 // TODO: Parse file shebangs to determine filetype as a fallback.
 //		 Look at https://godoc.org/golang.org/x/Tools for more go Tools

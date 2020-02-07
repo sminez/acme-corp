@@ -1,4 +1,4 @@
 #!/bin/bash
 #
 # Turn autoformating on
-curl -s -X POST -d 1 127.0.0.1:1992/fmt
+echo "fmt / on" | nc localhost 2009

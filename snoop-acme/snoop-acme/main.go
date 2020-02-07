@@ -9,7 +9,6 @@ import (
 
 	"9fans.net/go/acme"
 	"github.com/sminez/acme-corp/snoop-acme"
-	"github.com/sminez/acme-corp/snoop-acme/afmt"
 )
 
 const (
@@ -34,10 +33,9 @@ func NewAcmeSnooper() *AcmeSnooper {
 	if err != nil {
 		log.Fatal(err)
 	}
-	pwd, _ := os.Getwd()
-	win.Name(pwd + "/+snoop")
+	win.Name("/+snoop")
 	win.Ctl("clean")
-	win.Fprintf("tag", defaultSnoopTag)
+	win.Write("tag", []byte(defaultSnoopTag))
 
 	return &AcmeSnooper{
 		activeWindow: -1,
@@ -47,19 +45,20 @@ func NewAcmeSnooper() *AcmeSnooper {
 	}
 }
 
-func (a *AcmeSnooper) writeToSnoopWindow(s string) {
-	a.snoopWindow.Write("body", []byte(s))
+func (a *AcmeSnooper) log(s string) {
+	a.snoopWindow.Write("body", []byte(s+"\n"))
+	a.snoopWindow.Ctl("clean")
 }
 
 // Snoop kicks off our local server and starts listening in on acme events.
 func (a *AcmeSnooper) Snoop(chSignals chan os.Signal) {
-	a.listener.RegisterHandler("active", a.activeHandler)
-	a.listener.RegisterHandler("fmt", a.fmtHandler)
+	a.listener.Register("active", a.activeHandler)
+	a.listener.Register("fmt", a.fmtHandler)
 
 	go a.listener.HandleIncomingConnections()
 	go a.tailLog()
 
-	a.writeToSnoopWindow("acme snooper: Running")
+	a.log("acme snooper now running")
 
 	for {
 		select {
@@ -76,7 +75,7 @@ func (a *AcmeSnooper) Snoop(chSignals chan os.Signal) {
 					continue
 				}
 
-				for _, ft := range afmt.FTYPES {
+				for _, ft := range snoop.FTYPES {
 					if ft.Matches(&e) {
 						ft.Reformat(&e)
 					}
@@ -104,12 +103,12 @@ func (a *AcmeSnooper) fmtHandler(s string) (string, error) {
 	switch s {
 	case "on":
 		a.formatOn = true
-		a.writeToSnoopWindow("format on save: on")
+		a.log("format on save: enabled")
 		return "on", nil
 
 	case "off":
 		a.formatOn = false
-		a.writeToSnoopWindow("format on save: off")
+		a.log("format on save: disabled")
 		return "off", nil
 
 	default:
@@ -118,7 +117,7 @@ func (a *AcmeSnooper) fmtHandler(s string) (string, error) {
 }
 
 func (a *AcmeSnooper) activeHandler(s string) (string, error) {
-	return string(a.activeWindow), nil
+	return fmt.Sprintf("%d", a.activeWindow), nil
 }
 
 func main() {

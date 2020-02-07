@@ -66,8 +66,8 @@ func (l *Listener) HandleIncomingConnections() {
 	}
 }
 
-// RegisterHandler registers a new message handler with a given route
-func (l *Listener) RegisterHandler(route string, handler MessageHandler) {
+// Register registers a new message handler with a given route
+func (l *Listener) Register(route string, handler MessageHandler) {
 	l.handlers[route] = handler
 }
 
@@ -88,7 +88,7 @@ func (l *Listener) handleConnection(conn net.Conn) {
 		return
 	}
 
-	resp, err := handler(s)
+	resp, err := handler(msg.content)
 	if err != nil {
 		conn.Write([]byte(err.Error()))
 		return

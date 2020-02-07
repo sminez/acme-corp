@@ -1,12 +1,12 @@
-// Package afmt watches acme for know file extensions on files
-// being written inside acme. Each time a known file is written,
-// it runs the appropriate Tool and reloads the file in acme.
+package snoop
+
+// afmt watches acme for know file extensions on files being written inside
+// acme. Each time a known file is written, it runs the appropriate Tool and
+// reloads the file in acme.
 //
-// NOTE: This will _not_ run for files without the correct file extension
-//       For example, python scripts without a .py
 // TODO: Rewrite this to modify the _window_ body rather than the underlying
 //		 files. Would this also require a check that we had been idempotent?
-package afmt
+// TODO: parse shebangs!
 
 import (
 	"fmt"
@@ -73,7 +73,6 @@ type FileType struct {
 }
 
 // Matches checks to see if this is a file we need to reformat
-// TODO: parse shebangs!
 func (f *FileType) Matches(e *acme.LogEvent) bool {
 	fileExtension := path.Ext(e.Name)
 	for _, ext := range f.extensions {
