@@ -14,7 +14,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -42,6 +41,7 @@ type node struct {
 	depth      int
 	isDir      bool
 	isExpanded bool
+	isHidden   bool
 	showHidden bool
 	contents   []*node
 }
@@ -55,34 +55,9 @@ type fileTree struct {
 }
 
 func main() {
-	var root string
-
-	flag.Usage = showUsage
-	flag.Parse()
-	args := flag.Args()
-
-	switch len(args) {
-	case 0:
-		root, _ = os.Getwd()
-	case 1:
-		temp := path.Clean(args[0])
-		if temp[0] != '/' {
-			cwd, _ := os.Getwd()
-			root = path.Join(cwd, temp)
-		} else {
-			root = temp
-		}
-	default:
-		showUsage()
-	}
-
+	root, _ := os.Getwd()
 	f := newFileTree(root)
 	f.runEventLoop()
-}
-
-func showUsage() {
-	fmt.Fprintf(os.Stderr, "usage: dirtree [path]\n")
-	os.Exit(2)
 }
 
 func newFileTree(root string) *fileTree {
@@ -103,13 +78,17 @@ func escapePath(path string) string {
 	return strings.Replace(path, " ", "\\ ", -1)
 }
 
+// Essentially just run 'ls' for the given root directory. We lazy list contents
+// of expanded directories as we expand them so we tag the nodes with their
+// depth as they are created in order to track their path relative to the
+// +dirtree window root.
 func getNodes(root string, depth int) ([]*node, error) {
+	var nodes []*node
+
 	fileInfo, err := ioutil.ReadDir(root)
 	if err != nil {
 		return nil, err
 	}
-
-	var nodes []*node
 
 	for _, f := range fileInfo {
 		name := f.Name()
@@ -118,24 +97,26 @@ func getNodes(root string, depth int) ([]*node, error) {
 			fullPath: filepath.Join(root, name),
 			depth:    depth,
 			isDir:    f.IsDir(),
+			isHidden: name[0] == '.',
 			contents: []*node{},
 		}
 		nodes = append(nodes, &n)
 	}
+
 	return nodes, nil
 }
 
 func (n *node) String() string {
-	if !n.showHidden && n.name[0] == '.' {
+	if n.isHidden && !n.showHidden {
 		return ""
 	}
 
 	prefix := FILE
 	if n.isDir {
-		prefix = DIRCOLLAPSED
-
 		if n.isExpanded {
 			prefix = DIREXPANDED
+		} else {
+			prefix = DIRCOLLAPSED
 		}
 	}
 
@@ -144,24 +125,19 @@ func (n *node) String() string {
 	}
 
 	s := fmt.Sprintf("%s%s\n", prefix, n.name)
-	if !(n.isDir && n.isExpanded) {
-		return s
-	}
 
-	for _, m := range n.contents {
-		m.showHidden = n.showHidden
-		ms := m.String()
-		if len(ms) > 0 {
-			s = fmt.Sprintf("%s%s", s, ms)
+	if n.isDir && n.isExpanded {
+		for _, m := range n.contents {
+			m.showHidden = n.showHidden
+			s += m.String()
 		}
 	}
-
 	return s
 }
 
-// Send the filename to the plumber for opening. Depending on the filename
-// this can still fail to open but at that point it is the responsibility
-// of the user to write an appropriate plumbing rule.
+// Send the filename to the plumber for opening. Depending on the filename this
+// can still fail to open but at that point it is the responsibility of the user
+// to write an appropriate plumbing rule.
 func (n *node) plumb() error {
 	port, err := plumb.Open("send", plan9.OWRITE)
 	if err != nil {
@@ -180,10 +156,12 @@ func (n *node) plumb() error {
 	return msg.Send(port)
 }
 
-// We clear/refetch the nodes on expand/collapse in order to allow
-// the user to refresh the contents of a directory if, for example,
-// they have created a new file.
+// We clear/refetch the nodes on expand/collapse in order to allow the user to
+// refresh the contents of a directory if, for example, they have created a new
+// file.
 func (f *fileTree) toggleDirectory(n *node) {
+	var err error
+
 	if n.isExpanded {
 		n.isExpanded = false
 		for _, child := range n.contents {
@@ -193,7 +171,6 @@ func (f *fileTree) toggleDirectory(n *node) {
 		return
 	}
 
-	var err error
 	n.isExpanded = true
 	n.contents, err = getNodes(n.fullPath, n.depth+1)
 	if err != nil {
@@ -206,13 +183,12 @@ func (f *fileTree) toggleDirectory(n *node) {
 func (f *fileTree) String() string {
 	// Wrap in parens for easy button3 to open the default acme file explorer
 	s := fmt.Sprintf("(%s)\n\n", f.root)
+
 	for _, n := range f.rootNodes {
 		n.showHidden = f.showHidden
-		ns := n.String()
-		if len(ns) > 0 {
-			s = fmt.Sprintf("%s%s", s, ns)
-		}
+		s += n.String()
 	}
+
 	return s
 }
 
