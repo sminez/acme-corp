@@ -3,14 +3,17 @@
 // This make use of the Sam editing language in order to manipulate
 // the acme `addr` file for the paired window, allowing us to set
 // the position of the cursor, search back through the tree etc.
-// The Same command language is _similar_ to [s]ed but has a bit more
+// The Sam command language is _similar_ to [s]ed but has a bit more
 // to it. See http://sam.cat-v.org/cheatsheet/ for a quick cheatsheet
 // and look at http://doc.cat-v.org/bell_labs/structural_regexps/se.pdf
 // for more on structural regular expressions.
 //
-// TODO: Only delete / insert the text that has changed as the result of
+// TODO: - Only delete / insert the text that has changed as the result of
 //       a user action. Probably would also want a `reset` action as well
 //       in case the user messed up the state of the window.
+//       - We don't follow the normal acme semantics for selecting text at
+//       present: we map a button 3 click to the _line_ it was on not the
+//       selected text. This is useful but potentially confusing...
 package main
 
 import (
@@ -42,7 +45,6 @@ type node struct {
 	isDir      bool
 	isExpanded bool
 	isHidden   bool
-	showHidden bool
 	contents   []*node
 }
 
@@ -57,36 +59,42 @@ type fileTree struct {
 func main() {
 	root, _ := os.Getwd()
 	f := newFileTree(root)
+	f.redraw(nil)
 	f.runEventLoop()
 }
 
 func newFileTree(root string) *fileTree {
+	win, err := acme.New()
+	if err != nil {
+		fmt.Printf("Unable to initialise new acme window: %s\n", err)
+		os.Exit(1)
+	}
+
+	win.Name("+dirtree")
+	win.Write("tag", []byte("UpDir Hidden"))
+	rootNodes, _ := getNodes(root, 0)
+
 	f := fileTree{
+		w:          win,
 		root:       root,
 		showHidden: false,
-		rootNodes:  []*node{},
+		rootNodes:  rootNodes,
 		nodeMap:    make(map[string]*node),
 	}
 
-	f.rootNodes, _ = getNodes(f.root, 0)
-	f.registerNodes(f.rootNodes)
-
+	f.registerNodes(rootNodes)
 	return &f
 }
 
-func escapePath(path string) string {
-	return strings.Replace(path, " ", "\\ ", -1)
-}
-
 // Essentially just run 'ls' for the given root directory. We lazy list contents
-// of expanded directories as we expand them so we tag the nodes with their
-// depth as they are created in order to track their path relative to the
-// +dirtree window root.
+// of directories as we expand them so we tag the nodes with their depth as they
+// are created in order to track their path relative to the +dirtree window root.
 func getNodes(root string, depth int) ([]*node, error) {
+	var fileInfo []os.FileInfo
 	var nodes []*node
+	var err error
 
-	fileInfo, err := ioutil.ReadDir(root)
-	if err != nil {
+	if fileInfo, err = ioutil.ReadDir(root); err != nil {
 		return nil, err
 	}
 
@@ -106,8 +114,10 @@ func getNodes(root string, depth int) ([]*node, error) {
 	return nodes, nil
 }
 
-func (n *node) String() string {
-	if n.isHidden && !n.showHidden {
+// Generate a string representation for this node and all child nodes if this is
+// an expanded directory. Otherwise, just correctly indent this node for the tree.
+func (n *node) stringifyRecursive(showHidden bool) string {
+	if n.isHidden && !showHidden {
 		return ""
 	}
 
@@ -120,18 +130,15 @@ func (n *node) String() string {
 		}
 	}
 
-	for i := 0; i < n.depth; i++ {
-		prefix = prefix + INDENT
-	}
-
+	prefix = prefix + strings.Repeat(INDENT, n.depth)
 	s := fmt.Sprintf("%s%s\n", prefix, n.name)
 
 	if n.isDir && n.isExpanded {
 		for _, m := range n.contents {
-			m.showHidden = n.showHidden
-			s += m.String()
+			s += m.stringifyRecursive(showHidden)
 		}
 	}
+
 	return s
 }
 
@@ -150,52 +157,70 @@ func (n *node) plumb() error {
 		Dst:  "",
 		Dir:  "/",
 		Type: "text",
-		Data: []byte(escapePath(n.fullPath)),
+		Data: []byte(strings.Replace(n.fullPath, " ", "\\ ", -1)),
 	}
 
 	return msg.Send(port)
 }
 
-// We clear/refetch the nodes on expand/collapse in order to allow the user to
-// refresh the contents of a directory if, for example, they have created a new
-// file.
+// We clear & refetch the nodes on expand/collapse in order to allow the user to
+// refresh the contents of a directory.
 func (f *fileTree) toggleDirectory(n *node) {
-	var err error
-
-	if n.isExpanded {
-		n.isExpanded = false
+	switch n.isExpanded {
+	case true:
 		for _, child := range n.contents {
 			delete(f.nodeMap, child.fullPath)
 		}
 		n.contents = []*node{}
-		return
+
+	case false:
+		var err error
+		if n.contents, err = getNodes(n.fullPath, n.depth+1); err != nil {
+			f.w.Write("error", []byte(err.Error()))
+			return
+		}
+		f.registerNodes(n.contents)
 	}
 
-	n.isExpanded = true
-	n.contents, err = getNodes(n.fullPath, n.depth+1)
-	if err != nil {
-		f.w.Write("error", []byte(err.Error()))
-		return
-	}
-	f.registerNodes(n.contents)
-}
-
-func (f *fileTree) String() string {
-	// Wrap in parens for easy button3 to open the default acme file explorer
-	s := fmt.Sprintf("(%s)\n\n", f.root)
-
-	for _, n := range f.rootNodes {
-		n.showHidden = f.showHidden
-		s += n.String()
-	}
-
-	return s
+	n.isExpanded = !n.isExpanded
 }
 
 func (f *fileTree) registerNodes(ns []*node) {
 	for _, n := range ns {
 		f.nodeMap[n.fullPath] = n
 	}
+}
+
+// Recursively stringify the current state of the entire tree. We also
+// include the abspath to the current root node at the head of the
+// window in order to make it easy to quickly perform other actions.
+func (f *fileTree) String() string {
+	var s string
+
+	for _, n := range f.rootNodes {
+		s += n.stringifyRecursive(f.showHidden)
+	}
+
+	return fmt.Sprintf("(%s)\n\n%s", f.root, s)
+}
+
+// Redraw the entire file tree window in its current state (currently this is
+// incredibly inefficient). If this was triggered by an event (rather than an
+// internal call from dirtree itself) we preserve the current 'dot' in acme,
+// otherwise we set the 'dot' to the first line of the window.
+func (f *fileTree) redraw(e *acme.Event) {
+	f.w.Clear()
+	f.w.Write("body", []byte(f.String()))
+
+	if e != nil {
+		f.w.Addr(fmt.Sprintf("#%d-1#0", e.OrigQ0))
+	} else {
+		f.w.Addr("1-1#0")
+	}
+
+	f.w.Ctl("dot=addr")
+	f.w.Ctl("clean")
+	f.w.Ctl("show")
 }
 
 func (f *fileTree) resetRoot(root string) {
@@ -207,27 +232,14 @@ func (f *fileTree) resetRoot(root string) {
 	f.redraw(nil)
 }
 
-// Infinite loop
+// loop over events we get from '+dirtree' until the user closes the window
 func (f *fileTree) runEventLoop() {
-	win, err := acme.New()
-	if err != nil {
-		fmt.Printf("Unable to initialise new acme window: %s\n", err)
-		os.Exit(1)
-	}
-
-	win.Name("+dirtree")
-	win.Write("tag", []byte("UpDir Hidden"))
-
-	f.w = win
-	f.redraw(nil)
-
-	for e := range win.EventChan() {
+	for e := range f.w.EventChan() {
 		switch e.C2 {
-		case 'x':
-			// middle click in the tag
+		case 'x': // middle click in the tag
 			switch strings.TrimSpace(string(e.Text)) {
 			case "Del":
-				win.Ctl("delete")
+				f.w.Ctl("delete")
 
 			case "Hidden":
 				f.showHidden = !f.showHidden
@@ -238,11 +250,21 @@ func (f *fileTree) runEventLoop() {
 
 			default:
 				// Let acme handle it
-				win.WriteEvent(e)
+				f.w.WriteEvent(e)
 			}
 
-		case 'L':
-			// right click in body
+		case 'X': // middle click in body
+			path, err := f.getPath(e)
+			if err != nil {
+				f.w.Write("error", []byte(err.Error()))
+				continue
+			}
+
+			if n := f.nodeMap[path]; n.isDir {
+				f.resetRoot(n.fullPath)
+			}
+
+		case 'L': // right click in body
 			path, err := f.getPath(e)
 			if err != nil {
 				f.w.Write("error", []byte(err.Error()))
@@ -254,7 +276,7 @@ func (f *fileTree) runEventLoop() {
 				// The path we generated didn't map to a known node so
 				// this is most likely user entered text. Rather than
 				// bail, see if acme knows what to do with it.
-				win.WriteEvent(e)
+				f.w.WriteEvent(e)
 				continue
 			}
 
@@ -264,61 +286,27 @@ func (f *fileTree) runEventLoop() {
 				continue
 			}
 
-			err = n.plumb()
-			if err != nil {
-				win.Write("error", []byte(err.Error()))
-			}
-
-		case 'X':
-			// middle click in body
-			path, err := f.getPath(e)
-			if err != nil {
+			if err = n.plumb(); err != nil {
 				f.w.Write("error", []byte(err.Error()))
-				continue
-			}
-
-			if n := f.nodeMap[path]; n.isDir {
-				f.resetRoot(n.fullPath)
 			}
 
 		default:
-			win.WriteEvent(e)
+			f.w.WriteEvent(e) // pass through
 
 		}
 	}
 }
 
-func (f *fileTree) redraw(e *acme.Event) {
-	f.w.Clear()
-	f.w.Write("body", []byte(f.String()))
-
-	if e != nil {
-		// Keep the previous dot, moving to the start of the line
-		f.w.Addr(fmt.Sprintf("#%d-1#0", e.OrigQ0))
-	} else {
-		f.w.Addr("1-1#0")
-	}
-
-	f.w.Ctl("dot=addr")
-	f.w.Ctl("clean")
-	f.w.Ctl("show")
-}
-
+// Fetch the entire line from acme using addr. The acme address syntax here is
+// going to the character at the begining of the event selection text (#e.Orig0),
+// jumping back to the start of the line (-) and selecting to the end (+).
 func (f *fileTree) getPath(e *acme.Event) (string, error) {
-	// Fetch the entire line from acme using addr
-	// The acme address syntax here is going to the character at the
-	// begining of the event selection text (#e.Orig0), jumping back
-	// to the start of the line (-) and selecting to the end (+).
 	f.w.Addr(fmt.Sprintf("#%d-+", e.OrigQ0))
 	b := make([]byte, BUFFSIZE)
 	n, _ := f.w.Read("xdata", b)
-	line := string(b[:n-1])
+	line := string(b[:n-1])[SEPSIZE:]
 
-	// Now that we have the line, get it's indentation level and walk
-	// our way back up the window to get the rest of the path components.
 	var ix int
-	line = line[SEPSIZE:]
-
 	for i := 0; i < len(line); i++ {
 		if line[i] != ' ' {
 			ix = i
@@ -327,20 +315,15 @@ func (f *fileTree) getPath(e *acme.Event) (string, error) {
 	}
 
 	indent := len(line[:ix]) / SEPSIZE
-	clicked := line[ix:]
+	p := []string{line[ix:]}
 
-	p := []string{clicked}
-
+	// Now that we have the line, get it's indentation level and walk
+	// our way back up the window to get the rest of the path components.
 	for i := indent - 1; i >= 0; i-- {
-		spacer := ""
-		for j := 0; j < i; j++ {
-			spacer = spacer + INDENT
-		}
-
 		// Reverse search (-/regexp/) for the first line that is a directory
 		// (starts with -/+) and is at the correct indentation level. Then
 		// select the entire line.
-		f.w.Addr(fmt.Sprintf(`-/[\-\+] %s[^ ]+/-+`, spacer))
+		f.w.Addr(fmt.Sprintf(`-/[\-\+] %s[^ ]+/-+`, strings.Repeat(INDENT, i)))
 		b := make([]byte, BUFFSIZE)
 		n, _ := f.w.Read("xdata", b)
 		comp := strings.TrimSpace(string(b[:n-1])[SEPSIZE:])
