@@ -1,9 +1,10 @@
 #!/bin/bash
-# 
+#
 # Use Rofi as a fuzzy search of the current window, jumping to the
 # selected line and highlighting it.
 
-winid=$(/home/innes/Personal/acme-corp/scripts/afocused)
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+winid=$("$DIR"/afocused)
 if [ "$winid" -eq -1 ]; then
     # We need to have seen a focus event before this will work
     exit 1

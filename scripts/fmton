@@ -1,4 +1,4 @@
 #!/bin/bash
 #
 # Turn autoformating on
-echo "fmt / on" | nc localhost 2009
+echo "fmt / on" | nc localhost 2009  >/dev/null

@@ -14,7 +14,7 @@ var formatableTypes = []FileType{
 var golang = FileType{
 	extensions: []string{"go"},
 	Tools: []Tool{
-		Tool{cmd: "goimports", args: []string{"-w"}},
+		Tool{cmd: "goimports", args: []string{"-w"}, appendFilePath: true},
 		Tool{cmd: "go", args: []string{"vet"}},
 	},
 }
@@ -24,13 +24,14 @@ var python = FileType{
 	shebangProgs: []string{"python"},
 	Tools: []Tool{
 		Tool{
-			cmd:          "isort",
-			args:         []string{"-m", "5"},
-			ignoreOutput: true,
+			cmd:            "isort",
+			args:           []string{"-m", "5"},
+			ignoreOutput:   true,
+			appendFilePath: true,
 		},
-		Tool{cmd: "black", args: []string{"-q", "--line-length", "100"}},
+		Tool{cmd: "black", args: []string{"-q", "--line-length", "100"}, appendFilePath: true},
 		// Black is pep8 compliant but flake8 is not...
-		Tool{cmd: "flake8", args: []string{"--ignore=E203,W503"}},
+		Tool{cmd: "flake8", args: []string{"--ignore=E203,W503"}, appendFilePath: true},
 	},
 }
 
@@ -43,17 +44,18 @@ var shell = FileType{
 	extensions: []string{"sh", "bash", "zsh"},
 	Tools: []Tool{
 		// Remove trailing whitespace and whitespace only lines
-		Tool{cmd: "sed", args: []string{"-i", "'s/[[:blank:]]*$//g'"}},
-		Tool{cmd: "shellcheck", args: []string{"--color=never"}},
+		Tool{cmd: "sed", args: []string{"-i", "'s/[[:blank:]]*$//g'"}, appendFilePath: true},
+		Tool{cmd: "shellcheck", args: []string{"--color=never"}, appendFilePath: true},
 	},
 }
 
 var javascript = FileType{
 	extensions: []string{"js"},
 	Tools: []Tool{
-		Tool{cmd: "js-beautify", args: []string{"-r"}},
+		Tool{cmd: "js-beautify", args: []string{"-r"}, appendFilePath: true},
 		Tool{
-			cmd: "jshint",
+			cmd:            "jshint",
+			appendFilePath: true,
 			outputFixer: func(s string) string {
 				// Convert to button3 friendly output
 				s = strings.Replace(s, " line ", "", -1)
@@ -67,19 +69,20 @@ var javascript = FileType{
 
 var json = FileType{
 	extensions: []string{"json"},
-	Tools:      []Tool{Tool{cmd: "json-format"}},
+	Tools:      []Tool{Tool{cmd: "json-format", appendFilePath: true}},
 }
 
 var c = FileType{
 	extensions: []string{"c", "h"},
 	Tools: []Tool{
-		Tool{cmd: "c-astyle"},
+		Tool{cmd: "c-astyle", appendFilePath: true},
 		Tool{
 			cmd: "splint",
 			args: []string{
 				"+charintliteral", "+charint", "-exportlocal", "-compdef",
 				"-usedef", "-retvalint", "+relaxtypes",
 			},
+			appendFilePath: true,
 		},
 	},
 }

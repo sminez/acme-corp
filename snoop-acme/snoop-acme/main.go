@@ -18,6 +18,6 @@ func main() {
 	chSignals := make(chan os.Signal, 1)
 	signal.Notify(chSignals, progEndSignals...)
 
-	a := snoop.NewAcmeSnooper()
+	a := snoop.NewAcmeSnooper(false)
 	a.Snoop(chSignals)
 }

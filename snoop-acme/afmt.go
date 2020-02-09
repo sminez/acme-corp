@@ -11,8 +11,6 @@ package snoop
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
-	"os"
 	"os/exec"
 	"path"
 
@@ -22,45 +20,40 @@ import (
 // A Tool is a program that can rewrite source files or report
 // on errors that were encountered in the code.
 type Tool struct {
-	cmd          string
-	args         []string
-	outputFixer  func(string) string
-	ignoreOutput bool
+	cmd            string
+	args           []string
+	outputFixer    func(string) string
+	appendFilePath bool
+	ignoreOutput   bool
 }
 
 // TODO: copy the window body to a temp file, format it there and then
 //       reload it in the window body. Probably best to set up the temp
 //       file in FileType.Reformat and then pass that in here?
 //		 >> Look at how acmego does this
-func (t *Tool) reformat(e *acme.LogEvent) {
-	var msg string
+func (t *Tool) reformat(e *acme.LogEvent) string {
+	var args []string
 
-	_, err := ioutil.ReadFile(e.Name)
-	if err != nil {
-		return
+	if _, err := ioutil.ReadFile(e.Name); err != nil {
+		return err.Error()
 	}
 
-	args := append(t.args, e.Name)
-	output, err := exec.Command(t.cmd, args...).CombinedOutput()
-	if err != nil {
-		msg = err.Error()
-		if t.outputFixer != nil {
-			msg = t.outputFixer(msg)
-		}
-		fmt.Fprintf(os.Stderr, "%s error: %s\n", t.cmd, msg)
+	if t.appendFilePath {
+		args = append(t.args, e.Name)
+	} else {
+		args = t.args
 	}
 
-	if t.ignoreOutput {
-		return
+	b, _ := exec.Command(t.cmd, args...).CombinedOutput()
+	if t.ignoreOutput || len(b) == 0 {
+		return ""
 	}
 
-	if len(output) > 0 {
-		msg = fmt.Sprint(string(output))
-		if t.outputFixer != nil {
-			msg = t.outputFixer(msg)
-		}
-		fmt.Fprintf(os.Stdout, "%s: %s\n", t.cmd, msg)
+	if t.outputFixer != nil {
+		return t.outputFixer(string(b))
 	}
+
+	return string(b)
 }
 
 // A FileType defines a set of Tools and an associated file type
@@ -75,10 +68,12 @@ type FileType struct {
 // Matches checks to see if this is a file we need to reformat
 func (f *FileType) Matches(e *acme.LogEvent) bool {
 	fileExtension := path.Ext(e.Name)
-	for _, ext := range f.extensions {
-		// remove the .
-		if ext == fileExtension[1:] {
-			return true
+	if len(fileExtension) > 0 {
+		fileExtension = fileExtension[1:]
+		for _, ext := range f.extensions {
+			if fileExtension == ext {
+				return true
+			}
 		}
 		// if shebang is correct, return true
 	}
@@ -86,40 +81,21 @@ func (f *FileType) Matches(e *acme.LogEvent) bool {
 }
 
 // Reformat applies all known formatters to the underlying file
-func (f *FileType) Reformat(e *acme.LogEvent) {
-	w, err := acme.Open(e.ID, nil)
-	if err != nil {
-		log.Print(err)
-		return
+func (f *FileType) Reformat(e *acme.LogEvent) string {
+	var output string
+	var w *acme.Win
+	var err error
+
+	if w, err = acme.Open(e.ID, nil); err != nil {
+		fmt.Println(err)
+		return err.Error()
 	}
 	defer w.CloseFiles()
 
 	for _, t := range f.Tools {
-		t.reformat(e)
+		output += t.reformat(e)
 	}
+
 	w.Write("ctl", []byte("get"))
-}
-
-// WatchAndFormat is an example event loop using afmt
-func WatchAndFormat() {
-	l, err := acme.Log()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for {
-		event, err := l.Read()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// On window save, run any tools we know about
-		if event.Name != "" && event.Op == "put" {
-			for _, ft := range FTYPES {
-				if ft.Matches(&event) {
-					ft.Reformat(&event)
-				}
-			}
-		}
-	}
+	return output
 }

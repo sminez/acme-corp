@@ -11,12 +11,12 @@ import (
 // An AcmeSnooper snoops on acme events and listens for custom action requests over
 // TCP. This allows for richer reuse of existing acme wrappers from acme.go
 type AcmeSnooper struct {
-	activeWindow int
-	snoopWindow  *acme.Win
-	listener     *Listener
-	chLogEvents  chan acme.LogEvent
-	formatOn     bool
-	debug        bool
+	win         *acme.Win
+	listener    *Listener
+	chLogEvents chan acme.LogEvent
+	active      int
+	formatOn    bool
+	debug       bool
 }
 
 // NewAcmeSnooper inits an acme snooper and grabs the /+snoop window so that we
@@ -26,31 +26,28 @@ func NewAcmeSnooper(debug bool) *AcmeSnooper {
 	if err != nil {
 		log.Fatal(err)
 	}
-	win.Name("/+snoop")
+	win.Name("+snoop")
 	win.Ctl("clean")
 	win.Write("tag", []byte(defaultSnoopTag))
 
 	return &AcmeSnooper{
-		activeWindow: -1,
-		snoopWindow:  win,
-		listener:     NewListener(tcpPort),
-		chLogEvents:  make(chan acme.LogEvent),
-		formatOn:     false,
-		debug:        debug,
+		win:         win,
+		listener:    NewListener(tcpPort),
+		chLogEvents: make(chan acme.LogEvent),
+		active:      -1,
+		formatOn:    false,
+		debug:       debug,
 	}
 }
 
-func (a *AcmeSnooper) logf(s string, args ...interface{}) error {
-	a.snoopWindow.Write("body", []byte(fmt.Sprintf(s, args)))
-	a.snoopWindow.Ctl("clean")
+func (a *AcmeSnooper) logf(s string, args ...interface{}) {
+	a.win.Write("body", []byte(prompt+fmt.Sprintf(s, args...)))
+	a.win.Ctl("clean")
 }
 
-// TODO: Need to work out how to grab the current error window if there is one
-//       or create a new one if we can't see it.
-// func (a *AcmeSnooper) errorf(s string, args ...interface{}) error {
-// 	a.errorWindow.Write("body", []byte(fmt.Sprintf(s, args)))
-// 	a.errorWindow.Ctl("clean")
-// }
+func (a *AcmeSnooper) errorf(s string, args ...interface{}) {
+	a.win.Write("errors", []byte(fmt.Sprintf(s, args...)))
+}
 
 func (a *AcmeSnooper) tailLog() {
 	l, _ := acme.Log()
@@ -64,12 +61,12 @@ func (a *AcmeSnooper) fmtHandler(s string) (string, error) {
 	switch s {
 	case "on":
 		a.formatOn = true
-		a.logf("format on save: enabled")
+		a.logf("format on save: enabled\n")
 		return "on", nil
 
 	case "off":
 		a.formatOn = false
-		a.logf("format on save: disabled")
+		a.logf("format on save: disabled\n")
 		return "off", nil
 
 	default:
@@ -78,7 +75,7 @@ func (a *AcmeSnooper) fmtHandler(s string) (string, error) {
 }
 
 func (a *AcmeSnooper) activeHandler(s string) (string, error) {
-	return fmt.Sprintf("%d", a.activeWindow), nil
+	return fmt.Sprintf("%d", a.active), nil
 }
 
 // Snoop kicks off our local server and starts listening in on acme events.
@@ -89,7 +86,8 @@ func (a *AcmeSnooper) Snoop(chSignals chan os.Signal) {
 	go a.listener.HandleIncomingConnections()
 	go a.tailLog()
 
-	a.logf("acme snooper now running")
+	a.win.Write("body", []byte("-- acme corp --\n"))
+	a.logf("snooper now running...\n")
 
 	for {
 		select {
@@ -99,14 +97,18 @@ func (a *AcmeSnooper) Snoop(chSignals chan os.Signal) {
 				os.Exit(0) // acme was closed
 
 			case "focus":
-				a.activeWindow = e.ID
+				a.active = e.ID
 
 			case "put":
 				if a.formatOn && len(e.Name) > 0 {
 					for _, ft := range formatableTypes {
 						if ft.Matches(&e) {
-							ft.Reformat(&e)
+							s := ft.Reformat(&e)
+							if len(s) > 0 {
+								a.errorf(s)
+							}
 						}
+						break
 					}
 				}
 

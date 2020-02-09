@@ -2,6 +2,6 @@
 #
 # Start the acme text editor and some related helper utilities
 pgrep plumber || plumber &
-SHELL=rc acme -f /mnt/font/TerminessTTFNerdFontComplete-Medium/15a/font &
+SHELL=rc acme -f /mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font &
 sleep 1  # wait for acme to come up
 snoop-acme &
