@@ -1,0 +1,64 @@
+-- TODO --
+
+* Executing commands with button 2 in a `dirtree` window should work the same
+  way as in a standard directory window: currently because I'm not setting the
+  window name to have the correct file path (to avoid cluttering the tag) the
+  plumbing message being sent out by acme is all borked. The default pass
+  through probably just needs replacing with an explicit plumbing message
+  as with opening files.
+
+* 'pick' should allow for a bunch of scripts that fuzzy search through text in
+  a window and then do something with the selected line.
+  * with that in mind, probably want to default to numbering the lines and
+    using the line index to pull out the selected line rather than using even
+    MORE string matching.
+  * Whether or not it makes more sense to use this as a stand alone program or
+    something embedded in the snooper is something I still need to work out.
+
+* I'd REALLY like to be able to intercept the keyboard event stream in order to
+  define new bindings on the fly rather than hard coding them in the source
+  of my fork (because then it makes acme-corp depended on that fork).
+  * I've been able to tail the `acme/$winid/events` file before to see the
+    keystrokes as they come through but I don't think I've been able to
+    intercept them...I'll have to see what I can do now that I can revisit it!
+  * Failing that, for things like 'pick' I'm aiming to look at instead using
+    some sort of marker (e.g. line 1 and inside brackets?) which I can tail or
+    otherwise poll in order to snarf some input to drive things if I have to.
+
+* vim style ':' to get a command line but instead just bounce focus up to the
+  current window tag? This would make working quickly on common edit tasks that
+  I make use of a little nicer. For example, deciding that a variable name needs
+  changing, wanting to quickly spell check the current word under the cursor
+  (which is particularly useful when writing comments or error messages in a
+  source file as piping the entire thing through.
+  * Having the disposible command line with history is actually really nice as
+    opposed to cluttering up the tag though.
+
+* Read up on, practice and then write up some more of the `sam` editing
+  language. Structured regular expressions really do look wonderfully powerful
+  and it would be good to be able to make proper use of them in general rather
+  than simply as heavily commented "magic" lines in a couple of the utilities.
+  * Combined with the point above about having a sort of 'command mode' similar
+    to vim's Normal mode would allow me to do a lot of what I am after I think.
+
+* If the key interception stuff works then see if there is a way to get something
+  akin to vim motions working. Full blown vim editing is probably:
+    a) a giant task
+    b) not really in keeping with the spirit of things (simply `punt` to vim)
+    c) the wrong way to go about things
+  * All that said, I really do want a way to quickly select text for copying /
+    replacing similar to vim's word, to-end-of-line, paragraph, within delimiters
+    etc... style paradigm. That and being able to quickly grab a bunch of lines
+    via the keyboard (shift-V / ctrl-v) is something I'm really missing.
+
+* Maybe write my own version of `win` that can work with tab completion? This
+  wouldn't work with `rc` I don't think but it would let me use zsh maybe
+  provided that I could disable all the widgets (otherwise the window in acme
+  is going to EXPLODE...!)
+
+* It might also be worthwhile wrapping up some of the more common "mid-level"
+  code I'm begining to write so that it can be re-used between different
+  utilities. The alternative is to just build binaries that provide the
+  functionality and then wrap them in scripts / shell out to them from other
+  binaries.
+  * There's pros and cons to both sides so it's worth some thought.
