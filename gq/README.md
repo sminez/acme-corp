@@ -17,10 +17,6 @@ be used in the tag as a filter for you to pipe a selection through.
   to 100 characters.
 
 ### Known bugs
-- Small values of `-c` (<10?) result in additional empty lines being inserted
-  into the output.
-- We seem to get an addition newline following the output, resulting in a new
-  line being inserted below the selection when this is run inside acme.
 - Leading whitespace will be stripped.
 - Indentation within a comment block will be lost.
 

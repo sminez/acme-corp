@@ -20,16 +20,14 @@ var (
 )
 
 // Determine the largest prefix that we can find for all of the lines that we
-// have. By default, we stop at the first alphanumeric character encountered
-// but this can be overriden using the '-a' flag.
+// have. By default, we stop at the first alphanumeric character encountered but
+// this can be overriden using the '-a' flag.
 func maximalPrefix(lines []string, allowAlphaNumeric bool) string {
-	var k, n int
 	first := lines[0]
 	prefix := ""
 
-	if allowAlphaNumeric {
-		k = len(first)
-	} else {
+	k := len(first)
+	if !allowAlphaNumeric {
 		k = 0
 		for _, c := range first {
 			if unicode.IsLetter(c) || unicode.IsNumber(c) {
@@ -39,8 +37,8 @@ func maximalPrefix(lines []string, allowAlphaNumeric bool) string {
 		}
 	}
 
-	for n = 1; n < k; n++ {
-		s := first[:n]
+	for i := 1; i < k; i++ {
+		s := first[:i]
 		for _, l := range lines[1:] {
 			if !strings.HasPrefix(l, s) {
 				return strings.TrimSpace(prefix)
@@ -52,45 +50,47 @@ func maximalPrefix(lines []string, allowAlphaNumeric bool) string {
 	return strings.TrimSpace(prefix)
 }
 
-// runs in a goroutine
-func linesToWords(lines []string, prefix string, ch chan string) {
-	for _, l := range lines {
-		s := strings.Trim(strings.TrimPrefix(l, prefix), " \t")
-		words := strings.Split(s, " ")
-		for _, w := range words {
-			ch <- w
-		}
-	}
+func linesToWords(lines []string, prefix string) chan string {
+	ch := make(chan string)
 
-	close(ch)
+	go func() {
+		for _, l := range lines {
+			s := strings.Trim(strings.TrimPrefix(l, prefix), " \t")
+			for _, w := range strings.Split(s, " ") {
+				ch <- w
+			}
+		}
+		close(ch)
+	}()
+
+	return ch
 }
 
 func wrapLinesWithPrefix(lines []string, prefix string, columns int) {
-	var l, m string
-	ch := make(chan string)
-	l = prefix
+	var wrapped []string
 
-	go linesToWords(lines, prefix, ch)
-
-	for w := range ch {
+	l := prefix
+	for w := range linesToWords(lines, prefix) {
 		if w == "" {
-			fmt.Printf("%s\n%s\n", l, prefix)
+			wrapped = append(wrapped, fmt.Sprintf("%s\n%s\n", l, prefix))
 			l = prefix
 			continue
 		}
 
-		m = fmt.Sprintf("%s %s", l, w)
+		m := fmt.Sprintf("%s %s", l, w)
 		if len(m) <= columns {
 			l = m
 		} else {
-			fmt.Println(l)
+			wrapped = append(wrapped, l)
 			l = fmt.Sprintf("%s %s", prefix, w)
 		}
 	}
 
 	if len(l) > 0 {
-		fmt.Println(l)
+		wrapped = append(wrapped, l)
 	}
+
+	fmt.Print(strings.Join(wrapped, "\n"))
 }
 
 func main() {
