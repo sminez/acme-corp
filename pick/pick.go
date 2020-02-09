@@ -1,35 +1,26 @@
+// pick - a minimalist input selector
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
 
+	"9fans.net/go/acme"
 	"9fans.net/go/draw"
 )
 
 const (
-	windowTitle       = "pick"
-	defaultFont       = "/mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font"
-	defaultPrompt     = "> "
-	defaultLineCount  = 10
-	defaultNormalBg   = "#f2e5bc"
-	defaultSelectedBg = "#a89984"
-	defaultNormalFg   = "#282828"
-	defaultSelectedFg = "#eeeeee"
+	windowTitle   = "pick"
+	defaultPrompt = "> "
 )
 
 var (
 	ignoreCase = flag.Bool("i", false, "ignore case")
 	allowRegex = flag.Bool("r", false, "allow regular expression input")
-	lineCount  = flag.Int("l", defaultLineCount, "lines to display at once")
 	promtStr   = flag.String("p", defaultPrompt, "prompt to display before input")
-	fontSpec   = flag.String("fn", defaultFont, "font name")
-	normalBg   = flag.String("nb", defaultNormalBg, "normal background color in #RRGGBB format")
-	selectedBg = flag.String("sb", defaultSelectedBg, "selected background color in #RRGGBB format")
-	normalFg   = flag.String("nf", defaultNormalFg, "normal foreground color in #RRGGBB format")
-	selectedFg = flag.String("sf", defaultSelectedFg, "selected foreground color in #RRGGBB format")
 )
 
 // TODO: needs to actually compute dimensions for the window rather than return a default
@@ -63,9 +54,10 @@ func handleKeyboardInput(d *draw.Display, ch chan string) {
 			default:
 				// unknown control sequence so drop it
 			}
+		} else {
+			currentInput += string(r)
 		}
 
-		currentInput += string(r)
 		ch <- currentInput
 	}
 }
@@ -81,14 +73,34 @@ func initDisplay(font, windowSize string) *draw.Display {
 	return display
 }
 
+// TODO: should this be a goro that takes a channel of filter strings
+// and outputs to a channel of filtered lines? The main loop can then
+// send a new filter to reset and get new lines provided it clears the
+// input first.
+func filterLines(filter string, lines []string) []string {
+
+}
+
 func main() {
+	var lines []string
+	var win *acme.Win
+	var err error
 	flag.Parse()
 
-	// var lines []string
-	// s := bufio.NewScanner(os.Stdin)
-	// for s.Scan() {
-	// 	lines = append(lines, s.Text())
-	// }
+	if win, err = acme.New(); err != nil {
+		fmt.Printf("Unable to initialise new acme window: %s\n", err)
+		os.Exit(1)
+	}
+
+	win.Name("+pick")
+	win.Write("tag", []byte("Reset"))
+
+	s := bufio.NewScanner(os.Stdin)
+	for s.Scan() {
+		lines = append(lines, s.Text())
+	}
+
+	fmt.Println("got: ", lines)
 
 	disp := initDisplay(*fontSpec, getWindowSize())
 	ch := make(chan string)
@@ -96,7 +108,12 @@ func main() {
 	go handleKeyboardInput(disp, ch)
 	disp.Flush()
 
-	for input := range ch {
-		fmt.Printf("current input: '%s'\n", input)
+	// probably want to be smart about responding to edits in the filter
+	// but for now we simply re-filter the input on every edit
+	for filter := range ch {
+		fmt.Printf("current filter: '%s'\n", filter)
+		for _, l := range filterLines(filter, lines) {
+			fmt.Println(l)
+		}
 	}
 }
