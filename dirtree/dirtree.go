@@ -58,6 +58,11 @@ type fileTree struct {
 
 func main() {
 	root, _ := os.Getwd()
+	if root == "/" {
+		// Don't root the default location to the true root of the
+		// file system if we have been launched from a script
+		root, _ = os.UserHomeDir()
+	}
 	f := newFileTree(root)
 	f.redraw(nil)
 	f.runEventLoop()
