@@ -41,7 +41,7 @@ func (t *Tool) reformat(e *acme.LogEvent) string {
 	if t.appendFilePath {
 		args = append(t.args, e.Name)
 	} else {
-		args = t.args
+		args = append(t.args, path.Dir(e.Name))
 	}
 
 	b, _ := exec.Command(t.cmd, args...).CombinedOutput()
