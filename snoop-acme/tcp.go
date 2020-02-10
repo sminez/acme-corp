@@ -58,7 +58,7 @@ func NewListener(port int) *Listener {
 // HandleIncomingConnections binds to a tcp socket and serves handler responses
 // for incoming connections. Runs in a goroutine.
 func (l *Listener) HandleIncomingConnections() {
-	s, _ := net.Listen("tcp", fmt.Sprintf(":%d", l.port))
+	s, _ := net.Listen("tcp", fmt.Sprintf("localhost:%d", l.port))
 	for {
 		// silently dropping failed incoming connections
 		conn, _ := s.Accept()
