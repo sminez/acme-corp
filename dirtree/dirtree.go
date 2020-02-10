@@ -8,10 +8,7 @@
 // and look at http://doc.cat-v.org/bell_labs/structural_regexps/se.pdf
 // for more on structural regular expressions.
 //
-// TODO: - Only delete / insert the text that has changed as the result of
-//       a user action. Probably would also want a `reset` action as well
-//       in case the user messed up the state of the window.
-//       - We don't follow the normal acme semantics for selecting text at
+// TODO: - We don't follow the normal acme semantics for selecting text at
 //       present: we map a button 3 click to the _line_ it was on not the
 //       selected text. This is useful but potentially confusing...
 package main
@@ -59,8 +56,6 @@ type fileTree struct {
 func main() {
 	root, _ := os.Getwd()
 	if root == "/" {
-		// Don't root the default location to the true root of the
-		// file system if we have been launched from a script
 		root, _ = os.UserHomeDir()
 	}
 	f := newFileTree(root)
@@ -75,8 +70,8 @@ func newFileTree(root string) *fileTree {
 		os.Exit(1)
 	}
 
-	win.Name("+dirtree")
-	win.Write("tag", []byte("UpDir Hidden"))
+	win.Name(path.Join(root, "/-dirtree"))
+	win.Write("tag", []byte("Get UpDir Hidden"))
 	rootNodes, _ := getNodes(root, 0)
 
 	f := fileTree{
@@ -93,7 +88,7 @@ func newFileTree(root string) *fileTree {
 
 // Essentially just run 'ls' for the given root directory. We lazy list contents
 // of directories as we expand them so we tag the nodes with their depth as they
-// are created in order to track their path relative to the +dirtree window root.
+// are created in order to track their path relative to the /-dirtree window root.
 func getNodes(root string, depth int) ([]*node, error) {
 	var fileInfo []os.FileInfo
 	var nodes []*node
@@ -233,18 +228,25 @@ func (f *fileTree) resetRoot(root string) {
 	f.nodeMap = make(map[string]*node)
 	f.rootNodes, _ = getNodes(f.root, 0)
 	f.registerNodes(f.rootNodes)
-	f.w.Name("+dirtree")
+	f.w.Name(path.Join(f.root, "/-dirtree"))
 	f.redraw(nil)
 }
 
-// loop over events we get from '+dirtree' until the user closes the window
+// loop over events we get from '/-dirtree' until the user closes the window
 func (f *fileTree) runEventLoop() {
+	var knownNode bool
+	var err error
+	var n *node
+
 	for e := range f.w.EventChan() {
 		switch e.C2 {
 		case 'x': // middle click in the tag
 			switch strings.TrimSpace(string(e.Text)) {
 			case "Del":
 				f.w.Ctl("delete")
+
+			case "Get":
+				f.resetRoot(f.root)
 
 			case "Hidden":
 				f.showHidden = !f.showHidden
@@ -259,28 +261,17 @@ func (f *fileTree) runEventLoop() {
 			}
 
 		case 'X': // middle click in body
-			path, err := f.getPath(e)
-			if err != nil {
-				f.w.Write("error", []byte(err.Error()))
+			if n, knownNode = f.nodeFromEvent(e); !knownNode {
+				f.w.WriteEvent(e)
 				continue
 			}
 
-			if n := f.nodeMap[path]; n.isDir {
+			if n.isDir {
 				f.resetRoot(n.fullPath)
 			}
 
 		case 'L': // right click in body
-			path, err := f.getPath(e)
-			if err != nil {
-				f.w.Write("error", []byte(err.Error()))
-				continue
-			}
-
-			n, ok := f.nodeMap[path]
-			if !ok {
-				// The path we generated didn't map to a known node so
-				// this is most likely user entered text. Rather than
-				// bail, see if acme knows what to do with it.
+			if n, knownNode = f.nodeFromEvent(e); !knownNode {
 				f.w.WriteEvent(e)
 				continue
 			}
@@ -289,38 +280,46 @@ func (f *fileTree) runEventLoop() {
 				f.toggleDirectory(n)
 				f.redraw(e)
 				continue
-			}
-
-			if err = n.plumb(); err != nil {
-				f.w.Write("error", []byte(err.Error()))
+			} else {
+				if err = n.plumb(); err != nil {
+					f.w.Write("error", []byte(err.Error()))
+				}
 			}
 
 		default:
-			f.w.WriteEvent(e) // pass through
+			f.w.WriteEvent(e)
 
 		}
 	}
 }
 
-// Fetch the entire line from acme using addr. The acme address syntax here is
-// going to the character at the begining of the event selection text (#e.Orig0),
-// jumping back to the start of the line (-) and selecting to the end (+).
-func (f *fileTree) getPath(e *acme.Event) (string, error) {
+// use 'sam' addressing via the addr and xdata files for this window to extract the line that
+// we just clicked on so that we can then rebuild the complete filepath we need.
+func (f *fileTree) getPath(e *acme.Event) (string, bool) {
+	// Fetch the entire line from acme using addr. The acme address syntax here is
+	// going to the character at the begining of the event selection text (#e.Orig0),
+	// jumping back to the start of the line (-) and selecting to the end (+).
 	f.w.Addr(fmt.Sprintf("#%d-+", e.OrigQ0))
 	b := make([]byte, BUFFSIZE)
 	n, _ := f.w.Read("xdata", b)
-	line := string(b[:n-1])[SEPSIZE:]
 
-	var ix int
+	s := string(b[:n-1])
+	if len(s)-1 < SEPSIZE {
+		return "", false
+	}
+
+	line := s[SEPSIZE:]
+	j := 0
+
 	for i := 0; i < len(line); i++ {
 		if line[i] != ' ' {
-			ix = i
+			j = i
 			break
 		}
 	}
 
-	indent := len(line[:ix]) / SEPSIZE
-	p := []string{line[ix:]}
+	indent := len(line[:j]) / SEPSIZE
+	p := []string{line[j:]}
 
 	// Now that we have the line, get it's indentation level and walk
 	// our way back up the window to get the rest of the path components.
@@ -341,5 +340,17 @@ func (f *fileTree) getPath(e *acme.Event) (string, error) {
 		comps = append(comps, p[i])
 	}
 
-	return path.Join(comps...), nil
+	return path.Join(comps...), true
+}
+
+// Attempt to interperate the contents of this event as a filename that we can rebuild
+// using the current state of the '/-dirtree' window and then look up in our known nodes.
+func (f *fileTree) nodeFromEvent(e *acme.Event) (*node, bool) {
+	path, ok := f.getPath(e)
+	if !ok {
+		return nil, false
+	}
+
+	n, ok := f.nodeMap[path]
+	return n, ok
 }

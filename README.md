@@ -11,14 +11,7 @@ default fonts.
 Each top level directory is a stand alone go binary that should be possible to
 run with a vanilla acme installation independently from one another. That said,
 the intention is to run all of these as a suite of programs that compliment one
-another. The 'snooper' in particular is worth calling out: it acts as a glue
-layer for configuring watchers and global behaviour that can be modified by
-some additional held state. While I love the way acme is designed and the power
-that it gives to plain text, I really do want something that I can use to
-coordinate more complicated actions. You have always been able to do this through
-acme but I thought it would be fun to pull together some of the more common
-actions I want in a way that is easy to kick off when acme starts, as opposed
-to manually starting a bunch of programs while I'm working.
+another.
 
 
 ### Inspired by Suckless
@@ -27,22 +20,13 @@ and I have my own [patched versions][5] of all three that I tinker with from tim
 to time. I'm pretty satisfied with my current setup: despite running on an old,
 cheap HP laptop I get pretty snappy performance and I'm yet to see any random
 crashes (other than while I'm actively tinkering of course).
+
 With that in mind, acme-corp is written to be as simple as possible while still
 being readable. So, little to no magic hacks, comments and links around any of
 the more esoteric pieces of code (in particular the use of `sam` expressions
 to manipulate window content) and configuration by modifying the source. As much
 as I love writing parsers and command line utilities, it really is far easier to
-just pull simple things from environment variables and hard code the rest. If you
-want some different behaviour? Fork the repo! And please raise a PR or an issue
-with your changes: I'm learning as I go and your way may be something I want to
-use as well!
-
-All that said, I'm not making any promises to support this codebase in any way:
-if you find a bug by all means report it but don't expect me to be active on
-the issue tracker ;)
-This is a hobbby project for me and my interest in it rises and falls depending
-on my free time (limited with two kids) and my focus on this vs any other hobby
-project.
+just pull simple things from environment variables and hard code the rest.
 
 
 ### Installation
