@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# dedent the current line by $1 spaces. If no argument is
+# given then the indentation defaults to 2.
+
+INDENT="  "
+if [[ -n "$1" ]]; then
+  INDENT="$(printf %$1s)"
+fi
+
+sed "s/^$INDENT//"

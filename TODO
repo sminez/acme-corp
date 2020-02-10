@@ -3,6 +3,7 @@
 * `afmt` formatting and linting only seems to be running in the original root
   directory of acme itself when appendFilePath is set to false. (Need to cd to
   the correct directory before running the command)
+  * the 'awd' command might be what I need here to reset the directory?
 
 * Executing commands with button 2 in a `dirtree` window should work the same
   way as in a standard directory window: currently because I'm not setting the
@@ -66,3 +67,11 @@
   functionality and then wrap them in scripts / shell out to them from other
   binaries.
   * There's pros and cons to both sides so it's worth some thought.
+
+* Jira management
+  * actions
+    * view a sprint
+    * create tickets
+    * view my notifications and assigned tickets
+  * also want to be able to plumb open any jira ref in firefox
+  * will probably need to pull in details from the environment
