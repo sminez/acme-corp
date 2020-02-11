@@ -166,14 +166,12 @@ func (n *node) plumb() error {
 // We clear & refetch the nodes on expand/collapse in order to allow the user to
 // refresh the contents of a directory.
 func (f *fileTree) toggleDirectory(n *node) {
-	switch n.isExpanded {
-	case true:
+	if n.isExpanded {
 		for _, child := range n.contents {
 			delete(f.nodeMap, child.fullPath)
 		}
 		n.contents = []*node{}
-
-	case false:
+	} else {
 		var err error
 		if n.contents, err = getNodes(n.fullPath, n.depth+1); err != nil {
 			f.w.Write("error", []byte(err.Error()))
@@ -195,8 +193,7 @@ func (f *fileTree) registerNodes(ns []*node) {
 // include the abspath to the current root node at the head of the
 // window in order to make it easy to quickly perform other actions.
 func (f *fileTree) String() string {
-	var s string
-
+	s := ""
 	for _, n := range f.rootNodes {
 		s += n.stringifyRecursive(f.showHidden)
 	}
