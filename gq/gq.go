@@ -68,16 +68,21 @@ func linesToWords(lines []string, prefix string) chan string {
 
 func wrapLinesWithPrefix(lines []string, prefix string, columns int) {
 	var wrapped []string
+	var l, m, w string
 
-	l := prefix
-	for w := range linesToWords(lines, prefix) {
+	l = prefix
+	for w = range linesToWords(lines, prefix) {
 		if w == "" {
 			wrapped = append(wrapped, fmt.Sprintf("%s\n%s\n", l, prefix))
-			l = prefix
+			l = prefix + " "
 			continue
 		}
 
-		m := fmt.Sprintf("%s %s", l, w)
+		m = w
+		if len(l) > 0 {
+			m = fmt.Sprintf("%s %s", l, w)
+		}
+
 		if len(m) <= columns {
 			l = m
 		} else {

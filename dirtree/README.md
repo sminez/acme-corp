@@ -22,29 +22,22 @@ style (in case you want to do file operations with the listing).
   - Move the root of the file tree up to the parent directory then redraw the
   window.
 
+- Reset
+  - Collapse all expanded directories and re-fetch their contents
+
 
 ### Mouse Actions
-- Button 2 on directory name
-  - Set that as the new root directory of the tree and redraw
+- Button 2
+  - directory: Set that as the new root directory of the tree and redraw
 
-- Button 3 on a directory name
-  - Toggle the expand / collapse of the directory contents
-
-- Button 3 on a file name
-  - Open that file via using the plumber.
+- Button 3
+  - directory: Toggle the expand / collapse of the directory contents
+  - file: Open that file via using the plumber
+  - user typed text: attempt to execute in the shell as per normal acme windows.
+    - NOTE: the directory used for execution will be the current root of the tree.
 
 
 ### Known Bugs
-- The indentation of each item is used to parse out the absolute file path of
-  the text that was clicked on. Editing the indentation will break the parser
-  and result in dirtree crashing.
-- Spaces in file names _sometimes_ causes the plumber to fail...not sure why!
-- Some files refuse to open (again, not sure why yet...)
+- Spaces in file names _sometimes_ causes the plumber to fail...not sure why.
 - The entire tree is redrawn on each expansion / collapse of a node. If you have
   expanded a lot of nodes then you will see some noticeable redraw.
-
-
-### TODO
-- Add a redraw command to pull in any file changes we have made
-- Add a way to create / rename / manage files in general without
-  needing to punt to 'win'

@@ -70,8 +70,8 @@ func newFileTree(root string) *fileTree {
 		os.Exit(1)
 	}
 
-	win.Name(path.Join(root, "/-dirtree"))
-	win.Write("tag", []byte("Get UpDir Hidden"))
+	win.Name("+dirtree")
+	win.Write("tag", []byte("UpDir Hidden Reset"))
 	rootNodes, _ := getNodes(root, 0)
 
 	f := fileTree{
@@ -88,7 +88,7 @@ func newFileTree(root string) *fileTree {
 
 // Essentially just run 'ls' for the given root directory. We lazy list contents
 // of directories as we expand them so we tag the nodes with their depth as they
-// are created in order to track their path relative to the /-dirtree window root.
+// are created in order to track their path relative to the +dirtree window root.
 func getNodes(root string, depth int) ([]*node, error) {
 	var fileInfo []os.FileInfo
 	var nodes []*node
@@ -142,9 +142,6 @@ func (n *node) stringifyRecursive(showHidden bool) string {
 	return s
 }
 
-// Send the filename to the plumber for opening. Depending on the filename this
-// can still fail to open but at that point it is the responsibility of the user
-// to write an appropriate plumbing rule.
 func (n *node) plumb() error {
 	port, err := plumb.Open("send", plan9.OWRITE)
 	if err != nil {
@@ -225,11 +222,22 @@ func (f *fileTree) resetRoot(root string) {
 	f.nodeMap = make(map[string]*node)
 	f.rootNodes, _ = getNodes(f.root, 0)
 	f.registerNodes(f.rootNodes)
-	f.w.Name(path.Join(f.root, "/-dirtree"))
+	f.w.Name("+dirtree")
 	f.redraw(nil)
 }
 
-// loop over events we get from '/-dirtree' until the user closes the window
+// When pasing events through to the plumber, acme sets the execution directory
+// based on the current window name. I've tried manually composing the plumbing
+// message for this and I can't get it to work: so for now, setting the name of
+// the window correctly for long enought to plumb the message seems to work.
+func (f *fileTree) plumbEventAtCurrentRoot(e *acme.Event) {
+	f.w.Name("%s/+dirtree", f.root)
+	f.w.WriteEvent(e)
+	f.w.Name("+dirtree")
+	f.w.Ctl("clean")
+}
+
+// loop over events we get from '+dirtree' until the user closes the window
 func (f *fileTree) runEventLoop() {
 	var knownNode bool
 	var err error
@@ -242,7 +250,7 @@ func (f *fileTree) runEventLoop() {
 			case "Del":
 				f.w.Ctl("delete")
 
-			case "Get":
+			case "Reset":
 				f.resetRoot(f.root)
 
 			case "Hidden":
@@ -259,7 +267,7 @@ func (f *fileTree) runEventLoop() {
 
 		case 'X': // middle click in body
 			if n, knownNode = f.nodeFromEvent(e); !knownNode {
-				f.w.WriteEvent(e)
+				f.plumbEventAtCurrentRoot(e)
 				continue
 			}
 
@@ -341,7 +349,7 @@ func (f *fileTree) getPath(e *acme.Event) (string, bool) {
 }
 
 // Attempt to interperate the contents of this event as a filename that we can rebuild
-// using the current state of the '/-dirtree' window and then look up in our known nodes.
+// using the current state of the '+dirtree' window and then look up in our known nodes.
 func (f *fileTree) nodeFromEvent(e *acme.Event) (*node, bool) {
 	path, ok := f.getPath(e)
 	if !ok {
