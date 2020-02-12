@@ -6,114 +6,145 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"9fans.net/go/acme"
-	"9fans.net/go/draw"
 )
 
-const (
-	windowTitle   = "pick"
-	defaultPrompt = "> "
-)
+const promptStr = "> "
 
 var (
-	ignoreCase = flag.Bool("i", false, "ignore case")
-	allowRegex = flag.Bool("r", false, "allow regular expression input")
-	promtStr   = flag.String("p", defaultPrompt, "prompt to display before input")
+	ignoreCase          = flag.Bool("i", false, "ignore case")
+	snarfCurrentWindow  = flag.Bool("a", false, "use the current acme window as input and jump to the selection")
+	getWinidFromSnooper = flag.Bool("s", false, "get the current windowID from the snooper not the environment")
 )
 
-// TODO: needs to actually compute dimensions for the window rather than return a default
-//   - will need to be based on selected font size and lineCount
-func getWindowSize() string {
-	return "1024x800"
+type linePicker struct {
+	w             *acme.Win
+	lines         []string
+	filteredLines []string
+	currentInput  string
+	ignoreCase    bool
 }
 
-// runs in a goroutine
-func handleKeyboardInput(d *draw.Display, ch chan string) {
-	var kbCtl *draw.Keyboardctl
-	var currentInput string
+func newLinePicker(lines []string, ignoreCase bool) *linePicker {
+	w, err := acme.New()
+	if err != nil {
+		fmt.Printf("Unable to initialise new acme window: %s\n", err)
+		os.Exit(1)
+	}
+	w.Name("+pick")
+	w.Write("tag", []byte("Reset"))
 
-	kbCtl = d.InitKeyboard()
-	for r := range kbCtl.C {
+	return &linePicker{
+		w:             w,
+		lines:         lines,
+		filteredLines: lines,
+		currentInput:  "",
+		ignoreCase:    ignoreCase,
+	}
+}
+
+func (lp *linePicker) filter() (int, string, error) {
+	for e := range lp.w.EventChan() {
+		reRender := false
+
+		if e.C1 != 'K' {
+			// TODO: need to allow actions in the tag and maybe selecting the a line
+			//       via button 3, but probably should drop button 2 events?
+			lp.w.WriteEvent(e)
+			continue
+		}
+
+		r := e.Text[0]
 		if r <= 26 {
 			switch fmt.Sprintf("C-%c", r+96) {
-			case "C-h":
-				l := len(currentInput)
+			case "C-h": // backspace
+				l := len(lp.currentInput)
 				if l > 0 {
-					currentInput = currentInput[:l-1]
+					lp.currentInput = lp.currentInput[:l-1]
 				}
+				reRender = true
 
-			case "C-w":
-				words := strings.Split(currentInput, " ")
-				currentInput = strings.Join(words[:len(words)-1], " ")
+			case "C-w": // backwards kill word
+				words := strings.Split(lp.currentInput, " ")
+				lp.currentInput = strings.Join(words[:len(words)-1], " ")
+				reRender = true
 
 			case "C-c", "C-d":
+				lp.w.Del(true)
 				os.Exit(0)
 
 			default:
 				// unknown control sequence so drop it
 			}
 		} else {
-			currentInput += string(r)
+			lp.currentInput += string(r)
+			reRender = true
+
 		}
 
-		ch <- currentInput
+		if reRender {
+			// TODO: now trim lines to only show what has been filtered
+			// under the input line (that needs init-ing as well)
+		}
 	}
+
+	return 0, "", nil
 }
 
-func initDisplay(font, windowSize string) *draw.Display {
-	var display *draw.Display
-	var err error
-
-	if display, err = draw.Init(nil, font, windowTitle, windowSize); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR unable to open display: %s\n", err)
-		os.Exit(1)
+func getCurrentWindow() (*acme.Win, error) {
+	winStr := os.Getenv("winid")
+	if len(winStr) == 0 {
+		return nil, fmt.Errorf("-a can only be used from inside acme")
 	}
-	return display
-}
 
-// TODO: should this be a goro that takes a channel of filter strings
-// and outputs to a channel of filtered lines? The main loop can then
-// send a new filter to reset and get new lines provided it clears the
-// input first.
-func filterLines(filter string, lines []string) []string {
+	winID, err := strconv.Atoi(winStr)
+	if err != nil {
+		return nil, fmt.Errorf("Non numeric winid: %s\n", winStr)
+	}
 
+	w, err := acme.Open(winID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return w, nil
 }
 
 func main() {
-	var lines []string
-	var win *acme.Win
-	var err error
+	var (
+		lines []string
+		body  []byte
+		w     *acme.Win
+		err   error
+	)
+
 	flag.Parse()
 
-	if win, err = acme.New(); err != nil {
-		fmt.Printf("Unable to initialise new acme window: %s\n", err)
-		os.Exit(1)
-	}
+	if *snarfCurrentWindow {
+		if w, err = getCurrentWindow(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		defer w.CloseFiles()
 
-	win.Name("+pick")
-	win.Write("tag", []byte("Reset"))
+		w.Addr(",")
+		if body, err = w.ReadAll("data"); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		lines = strings.Split(string(body), "\n")
 
-	s := bufio.NewScanner(os.Stdin)
-	for s.Scan() {
-		lines = append(lines, s.Text())
-	}
-
-	fmt.Println("got: ", lines)
-
-	disp := initDisplay(*fontSpec, getWindowSize())
-	ch := make(chan string)
-
-	go handleKeyboardInput(disp, ch)
-	disp.Flush()
-
-	// probably want to be smart about responding to edits in the filter
-	// but for now we simply re-filter the input on every edit
-	for filter := range ch {
-		fmt.Printf("current filter: '%s'\n", filter)
-		for _, l := range filterLines(filter, lines) {
-			fmt.Println(l)
+	} else {
+		s := bufio.NewScanner(os.Stdin)
+		for s.Scan() {
+			lines = append(lines, s.Text())
 		}
 	}
+
+	lp := newLinePicker(lines, *ignoreCase)
+	n, selection, err := lp.filter()
+	fmt.Println(n, selection)
 }
