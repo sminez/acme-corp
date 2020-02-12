@@ -40,3 +40,30 @@ Now what self respecting hacker (in the original sense) can say no to that?
 (footnote: yes I know that acme has `sam` structural editing embedded but the
 need to jump up to the tag to type a command rather than bind common commands
 to key sequences/chords is a real pain.)
+
+
+### Some useful acme commands
+* Select with button 3:
+  * `:n`
+    * jump to (and select) line n of the file
+  * `:0`
+    * jump to the start of the file
+  *`:$`
+    * jump to the end of the file
+  * `:,`
+    * select the entire file
+
+* Select with button 2
+  * `Edit ,`
+    * select the entire file
+  * `Edit , d`
+    * clear the window
+  * `Edit , < SOME_EXTERNAL_COMMAND`
+    * replace body with the output of the external command
+  * `Edit , > SOME_EXTERNAL_COMMAND`
+    * pipe the current window content to an external command
+  * `Edit ,s/foo/bar/g`
+    * equivalent to `:%s/foo/bar/g` in vim
+
+* `$%` is the current window name (normally the abspath of the file being edited)
+* `$winid` is the current window ID
