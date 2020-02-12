@@ -1,0 +1,7 @@
+#! /usr/bin/env bash
+# My replacement for the normal 'grep -n' script. I always use ripgrep
+# anyway and it is noticebly faster in returning results
+
+rg --color=never --no-heading -n "$*"
+exit 0  # ripgrep has an exit code of 1 if there were no results which
+        # ends up in our output if we don't explicitly get rid of it.
