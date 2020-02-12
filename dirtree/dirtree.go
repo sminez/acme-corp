@@ -1,16 +1,4 @@
-// A directory tree viewer for acme.
-//
-// This make use of the Sam editing language in order to manipulate
-// the acme `addr` file for the paired window, allowing us to set
-// the position of the cursor, search back through the tree etc.
-// The Sam command language is _similar_ to [s]ed but has a bit more
-// to it. See http://sam.cat-v.org/cheatsheet/ for a quick cheatsheet
-// and look at http://doc.cat-v.org/bell_labs/structural_regexps/se.pdf
-// for more on structural regular expressions.
-//
-// TODO: - We don't follow the normal acme semantics for selecting text at
-//       present: we map a button 3 click to the _line_ it was on not the
-//       selected text. This is useful but potentially confusing...
+// A directory tree viewer for acme
 package main
 
 import (
@@ -161,15 +149,16 @@ func (n *node) plumb() error {
 }
 
 // We clear & refetch the nodes on expand/collapse in order to allow the user to
-// refresh the contents of a directory.
+// refresh the contents of a single directory.
 func (f *fileTree) toggleDirectory(n *node) {
+	var err error
+
 	if n.isExpanded {
 		for _, child := range n.contents {
 			delete(f.nodeMap, child.fullPath)
 		}
 		n.contents = []*node{}
 	} else {
-		var err error
 		if n.contents, err = getNodes(n.fullPath, n.depth+1); err != nil {
 			f.w.Write("error", []byte(err.Error()))
 			return
@@ -198,10 +187,6 @@ func (f *fileTree) String() string {
 	return fmt.Sprintf("(%s)\n\n%s", f.root, s)
 }
 
-// Redraw the entire file tree window in its current state (currently this is
-// incredibly inefficient). If this was triggered by an event (rather than an
-// internal call from dirtree itself) we preserve the current 'dot' in acme,
-// otherwise we set the 'dot' to the first line of the window.
 func (f *fileTree) redraw(e *acme.Event) {
 	f.w.Clear()
 	f.w.Write("body", []byte(f.String()))
