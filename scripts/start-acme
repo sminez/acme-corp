@@ -3,10 +3,12 @@
 
 case "$(uname)" in
     Linux)
-        font="/mnt/font/TerminessTTFNerdFontComplete-Medium/10a/font"
+        # font="/mnt/font/TerminessTTFNerdFontComplete-Medium/10a/font"
+        font="/mnt/font/ProFontForPowerline/10a/font"
         ;;
-    *)
-        font="/mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font"
+    Darwin)
+        # font="/mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font"
+        font="/mnt/font/ProFontForPowerline/12a/font"
         ;;
 esac
 

@@ -5,6 +5,7 @@ web links:  (http://doc.cat-v.org/plan_9/4th_edition/papers/acme/)
 local docs: acme(1)
             acme(4)
             sam(1)
+            regexp(7)
             9p(1)
             9pclient(3)
 
