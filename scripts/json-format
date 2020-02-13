@@ -1,4 +1,4 @@
 #!/bin/bash
-# formatted=$(cat "$1" | jq -M)
-formatted=$(python3 -m json.tool "$1")
+formatted=$(jq -M < "$1")
+# formatted=$(python3 -m json.tool "$1")
 echo "$formatted" > "$1"

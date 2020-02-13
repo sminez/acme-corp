@@ -1,7 +1,16 @@
 #!/bin/bash
-#
 # Start the acme text editor and some related helper utilities
+
+case "$(uname)" in
+    Linux)
+        font="/mnt/font/TerminessTTFNerdFontComplete-Medium/10a/font"
+        ;;
+    *)
+        font="/mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font"
+        ;;
+esac
+
 pgrep plumber || plumber &
-SHELL=rc acme -f /mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font &
+SHELL=rc acme -f $font &
 sleep 1  # wait for acme to come up
 snoop-acme &

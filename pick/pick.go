@@ -47,6 +47,8 @@ func newLinePicker(lines []string, ignoreCase bool) *linePicker {
 }
 
 func (lp *linePicker) filter() (int, string, error) {
+	var result string
+
 	for e := range lp.w.EventChan() {
 		reRender := false
 
@@ -57,6 +59,8 @@ func (lp *linePicker) filter() (int, string, error) {
 			continue
 		}
 
+		fmt.Printf("%#v\n", e)
+
 		r := e.Text[0]
 		if r <= 26 {
 			switch fmt.Sprintf("C-%c", r+96) {
@@ -66,6 +70,9 @@ func (lp *linePicker) filter() (int, string, error) {
 					lp.currentInput = lp.currentInput[:l-1]
 				}
 				reRender = true
+
+			case "C-j": // return
+				break
 
 			case "C-w": // backwards kill word
 				words := strings.Split(lp.currentInput, " ")
@@ -88,10 +95,12 @@ func (lp *linePicker) filter() (int, string, error) {
 		if reRender {
 			// TODO: now trim lines to only show what has been filtered
 			// under the input line (that needs init-ing as well)
+			msg := fmt.Sprintf("input: %s\n", lp.currentInput)
+			lp.w.Write("errors", []byte(msg))
 		}
 	}
 
-	return 0, "", nil
+	return 0, result, nil
 }
 
 func getCurrentWindow() (*acme.Win, error) {
@@ -102,7 +111,7 @@ func getCurrentWindow() (*acme.Win, error) {
 
 	winID, err := strconv.Atoi(winStr)
 	if err != nil {
-		return nil, fmt.Errorf("Non numeric winid: %s\n", winStr)
+		return nil, fmt.Errorf("non numeric winid: %s", winStr)
 	}
 
 	w, err := acme.Open(winID, nil)

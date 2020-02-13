@@ -15,6 +15,7 @@ var golang = FileType{
 	extensions: []string{"go"},
 	Tools: []Tool{
 		Tool{cmd: "goimports", args: []string{"-w"}, appendFilePath: true},
+		Tool{cmd: "golint"},
 		Tool{cmd: "go", args: []string{"vet"}},
 	},
 }
