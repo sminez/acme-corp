@@ -12,43 +12,58 @@
            'E' for writes to the body or tag file
            'F' for actions through the window's other files
 
-  * C2:    For mouse events this is Ll/Xx for load/execute (button 3/2). Upper case means the event was in
-           the body, lower case means it was in the tag. For keyboard events this is Ii/Dd for insert/delete
+  * C2:    For mouse events this is Ll/Xx for load/execute (button 3/2).
+           Upper case means the event was in the body, lower case means it
+           was in the tag. For keyboard events this is Ii/Dd for insert/delete
            with the same upper/lower case semantics as for mouse events.
 
-  * Q0,Q1: Character offsets into the file for where the event began and ended. For a keyboard action
-           this is usually a single character difference but in some cases (e.g. C-w) it shows how many
+  * Q0,Q1: Character offsets into the file for where the event began and
+           ended. For a keyboard action this is usually a single character
+           difference but in some cases (e.g. C-w) it shows how many
            chars were removed. (Presumably the same thing for paste?)
-           * There are some odd rules around these values if there was chording: see the godoc output or acme(4)
-           * OrigQ[0,1] show the original event positions in the same format as Q0,Q1 but before expansion was
-             applied. (in the case of expanding within parens, to a full word etc...)
+           * There are some odd rules around these values if there was
+             chording: see the godoc output or acme(4)
+           * OrigQ[0,1] show the original event positions in the same
+             format as Q0,Q1 but before expansion was applied. (In the case
+             of expanding within parens, to a full word etc...)
 
-  * Flag:  "The flag bits". The following is copied verbatim from the acme(4) man page:
-             For D, d, I, and i the flag is always zero. For X and x, the flag is a bitwise OR (reported decimally) of the
-             following: 1 if the text indicated is recognized as an acme built-in command; 2 if the text indicated is a
-             null string that has a non-null expansion; if so, another complete message will follow describing the
-             expansion exactly as if it had been indicated explicitly (its flag will always be 0); 8 if the command has
-             an extra (chorded) argument; if so, two more complete messages will follow reporting the argument (with all
-             numbers 0 except the character count) and where it originated, in the form of a fully-qualified button 3
-             style address.
-             For L and l, the flag is the bitwise OR of the following: 1 if acme can interpret the action without loading
-             a new file; 2 if a second (post-expansion) message follows, analogous to that with X messages; 4 if the text
-             is a file or window name (perhaps with address) rather than plain literal text.
-             For messages with the 1 bit on in the flag, writing the message back to the event file, but with the flag,
-             count, and text omitted, will cause the action to be applied to the file exactly as it would have been if
-             the event file had not been open.
+  * Flag:  "The flag bits". The following is copied verbatim from the
+           acme(4) man page:
+             For D, d, I, and i the flag is always zero. For X and x, the
+             flag is a bitwise OR (reported decimally) of the following:
+             1 if the text indicated is recognized as an acme built-in
+             command; 2 if the text indicated is a null string that has a
+             non-null expansion; if so, another complete message will follow
+             describing the expansion exactly as if it had been indicated
+             explicitly (its flag will always be 0); 8 if the command has
+             an extra (chorded) argument; if so, two more complete messages
+             will follow reporting the argument (with all numbers 0 except
+             the character count) and where it originated, in the form of a
+             fully-qualified button 3 style address.
+             For L and l, the flag is the bitwise OR of the following: 1 if
+             acme can interpret the action without loading a new file; 2 if
+             a second (post-expansion) message follows, analogous to that
+             with X messages; 4 if the text is a file or window name (perhaps
+             with address) rather than plain literal text.
+             For messages with the 1 bit on in the flag, writing the message
+             back to the event file, but with the flag, count, and text
+             omitted, will cause the action to be applied to the file exactly
+             as it would have been if the event file had not been open.
 
   * Nb:   The number of bytes present in the optional text
   * Nr:   The number of UTF-8 characters in the optional text
-  * Text: The text of the event itself (large selections will need to be fetched via xData and the Q0/1 values)
+  * Text: The text of the event itself (large selections will need to be
+          fetched via xData and the Q0/1 values)
   * Arg:  The chorded argument, if present (the 8 bit is set in the flag).
   * Loc:  The chorded location, if present (the 8 bit is set in the flag).
 
 
--- Some test events, snarfed while wokring on 'pick' (using the go API as opposed to tailing the file itself)
--- NOTE: I tried tailing the event file in the terminal at the same time and it looks like while you _can_ have
---       multiple programs listening in on events, you have to pass the events back through to acme from each
---       one and the event flow seems to be a stack with acme at the bottom and the newest listener at the top.
+-- Some test events, snarfed while working on 'pick' using the go API
+-- NOTE: I tried tailing the event file in the terminal at the same time and
+--       it looks like while you _can_ have multiple programs listening in on
+--       events, you have to pass the events back through to acme from each
+--       one and the event flow seems to be a stack with acme at the bottom
+--       and the newest listener at the top.
 
 >> INPUTS: a,b, backspace
 -------------------------
@@ -73,8 +88,9 @@
 
 
 -- Dealing with control characters
-The simplest thing to do (in terms of readability) is to either define the following as constants or, when a rune is < 26,
-add on 96 to offset it to the correct value to parse as the character in the control sequence (i, j, h etc)
+The simplest thing to do (in terms of readability) is to either define the
+following as constants or, when a rune is < 26, add on 96 to offset it to the
+correct value to parse as the character in the control sequence (i, j, h etc)
 
   0x8  - bckspc   ctrl+h
   0x9  - \t       ctrl+i
