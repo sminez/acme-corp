@@ -107,8 +107,8 @@ func (a *AcmeSnooper) Snoop(chSignals chan os.Signal) {
 							if len(s) > 0 {
 								a.errorf(s)
 							}
+							break
 						}
-						break
 					}
 				}
 

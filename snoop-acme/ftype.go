@@ -1,14 +1,12 @@
 package snoop
 
-// TODO: Parse file shebangs to determine filetype as a fallback.
-
 import (
 	"regexp"
 	"strings"
 )
 
 var formatableTypes = []FileType{
-	golang, python, shell, c, rust, javascript, json,
+	golang, python, shell, rust, c, javascript, json,
 }
 
 var golang = FileType{
@@ -22,7 +20,7 @@ var golang = FileType{
 
 var python = FileType{
 	extensions:   []string{"py", "pyw"},
-	shebangProgs: []string{"python"},
+	shebangProgs: []string{"python", "python3"},
 	Tools: []Tool{
 		Tool{
 			cmd:            "isort",
@@ -32,7 +30,7 @@ var python = FileType{
 		},
 		Tool{cmd: "black", args: []string{"-q", "--line-length", "100"}, appendFilePath: true},
 		// Black is pep8 compliant but flake8 is not...
-		Tool{cmd: "flake8", args: []string{"--ignore=E203,W503"}, appendFilePath: true},
+		Tool{cmd: "flake8", args: []string{"--ignore=E203,E501,W503"}, appendFilePath: true},
 	},
 }
 
@@ -42,16 +40,18 @@ var rust = FileType{
 }
 
 var shell = FileType{
-	extensions: []string{"sh", "bash", "zsh"},
+	extensions:   []string{"sh", "bash", "zsh"},
+	shebangProgs: []string{"bash", "sh", "zsh"},
 	Tools: []Tool{
 		// Remove trailing whitespace and whitespace only lines
-		Tool{cmd: "sed", args: []string{"-i", "'s/[[:blank:]]*$//g'"}, appendFilePath: true},
-		Tool{cmd: "shellcheck", args: []string{"--color=never"}, appendFilePath: true},
+		Tool{cmd: "sed", args: []string{"-i", "s/[[:blank:]]*$//g"}, appendFilePath: true},
+		Tool{cmd: "shellcheck", args: []string{"-f", "gcc"}, appendFilePath: true},
 	},
 }
 
 var javascript = FileType{
-	extensions: []string{"js"},
+	extensions:   []string{"js"},
+	shebangProgs: []string{"node"},
 	Tools: []Tool{
 		Tool{cmd: "js-beautify", args: []string{"-r"}, appendFilePath: true},
 		Tool{

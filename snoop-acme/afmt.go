@@ -6,13 +6,13 @@ package snoop
 //
 // TODO: Rewrite this to modify the _window_ body rather than the underlying
 //		 files. Would this also require a check that we had been idempotent?
-// TODO: parse shebangs!
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path"
+	"strings"
 
 	"9fans.net/go/acme"
 )
@@ -75,8 +75,19 @@ func (f *FileType) Matches(e *acme.LogEvent) bool {
 				return true
 			}
 		}
-		// if shebang is correct, return true
 	}
+
+	s, err := getFirstLine(e.ID)
+	if err != nil {
+		return false
+	}
+
+	for _, prog := range f.shebangProgs {
+		if strings.HasSuffix(s, prog) {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -98,4 +109,18 @@ func (f *FileType) Reformat(e *acme.LogEvent) string {
 
 	w.Write("ctl", []byte("get"))
 	return output
+}
+
+func getFirstLine(winid int) (string, error) {
+	w, err := acme.Open(winid, nil)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	defer w.CloseFiles()
+
+	w.Addr("#1-+")
+	b := make([]byte, 256)
+	n, _ := w.Read("xdata", b)
+	return string(b[:n-1]), nil
 }
