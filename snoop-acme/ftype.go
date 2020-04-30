@@ -6,7 +6,14 @@ import (
 )
 
 var formatableTypes = []FileType{
-	golang, python, shell, rust, c, javascript, json,
+	golang, python, shell, rust, c, javascript, json, text,
+}
+
+var text = FileType{
+	extensions: []string{"txt", "md"},
+	Tools: []Tool{
+		Tool{cmd: "spell", args: []string{"-b"}, appendFilePath: true},
+	},
 }
 
 var golang = FileType{
