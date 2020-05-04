@@ -18,6 +18,7 @@ WINID="$(echo "active / ." | nc localhost 2009)"
 
 # == helper functions ==
 # see acme(4) for details on the control files and event structure
+# NOTE: character offsets are zero indexed
 
 function writeClickEvent() {
   local eventType=$1 offset=$2 end=$3
@@ -35,8 +36,9 @@ function setTag() {
 }
 
 function spoofClickInTag() {
-  local eventType=$1 text=$2
+  local eventType=$1 rawText=$2
 
+  text="$(echo "$rawText" | xargs)"
   textLen="${#text}"
   echo "clean" | 9p write acme/"$WINID"/ctl
   fullTag="$(9p read "acme/$WINID/tag")"
@@ -54,11 +56,7 @@ function spoofClickInTag() {
 
 # == actions ==
 
-function externalCommand() {
-  local id=$1 cmd=$2
-  cd "$(windir "$id")" && "$cmd"
-}
-
+# TODO: default to prepending the current window directory if fname[0] != /
 function openInAcme() {
   local fname
   fname="$(echo "$1" | xargs)"
@@ -67,20 +65,9 @@ function openInAcme() {
   echo 'get' | 9p write "acme/$id/ctl"
 }
 
-function searchFromTag() {
-  local text=$1
-  spoofClickInTag "l" "$text"
-}
-
-function executeFromTag() {
-  local text=$1
-  spoofClickInTag "x" "$text"
-}
-
-function runEditCommand() {
-  local cmd=$1
-  executeFromTag "Edit $cmd"
-}
+function searchFromTag() { spoofClickInTag "l" "$1"; }
+function executeFromTag() { spoofClickInTag "x" "$1"; }
+function runEditCommand() { executeFromTag "Edit $1"; }
 
 # == main ==
 
