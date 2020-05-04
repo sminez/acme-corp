@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 # Use rofi to find a file and then open it in acme
 
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

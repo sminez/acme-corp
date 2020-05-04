@@ -2,6 +2,9 @@ acme itself
 -----------
 web links:  (http://doc.cat-v.org/plan_9/4th_edition/papers/acme/)
             (http://doc.cat-v.org/plan_9/4th_edition/papers/plumb)
+            (http://doc.cat-v.org/bell_labs/sam_lang_tutorial/sam_tut.pdf)
+            (https://github.com/jinyangustc/acme-editor/blob/master/sam.md)
+            (https://github.com/jinyangustc/acme-editor/blob/master/acme-sam-tips.txt)
 local docs: acme(1)
             acme(4)
             sam(1)
@@ -65,6 +68,8 @@ to key sequences/chords is a real pain.)
     * pipe the current window content to an external command
   * `Edit ,s/foo/bar/g`
     * equivalent to `:%s/foo/bar/g` in vim
+  * `Edit ,x/foo/c/bar/`
+    * a more idiomatic version of the above
 
 * `$%` is the current window name (normally the abspath of the file being edited)
 * `$winid` is the current window ID

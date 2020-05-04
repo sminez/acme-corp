@@ -12,15 +12,16 @@ import (
 	"9fans.net/go/acme"
 	"9fans.net/go/plan9"
 	"9fans.net/go/plumb"
+	"github.com/sminez/acme-corp/acorp"
 )
 
 const (
-	INDENT       = "  "
-	DIRCOLLAPSED = "+ "
-	DIREXPANDED  = "- "
-	FILE         = "  "
-	BUFFSIZE     = 1024
-	SEPSIZE      = 2
+	indentStr    = "  "
+	dirCollapsed = "+ "
+	dirExpanded  = "- "
+	file         = "  "
+	buffSize     = 1024
+	sepSize      = 2
 )
 
 type node struct {
@@ -109,16 +110,16 @@ func (n *node) stringifyRecursive(showHidden bool) string {
 		return ""
 	}
 
-	prefix := FILE
+	prefix := file
 	if n.isDir {
 		if n.isExpanded {
-			prefix = DIREXPANDED
+			prefix = dirExpanded
 		} else {
-			prefix = DIRCOLLAPSED
+			prefix = dirCollapsed
 		}
 	}
 
-	prefix = prefix + strings.Repeat(INDENT, n.depth)
+	prefix = prefix + strings.Repeat(indentStr, n.depth)
 	s := fmt.Sprintf("%s%s\n", prefix, n.name)
 
 	if n.isDir && n.isExpanded {
@@ -192,7 +193,7 @@ func (f *fileTree) redraw(e *acme.Event) {
 	f.w.Write("body", []byte(f.String()))
 
 	if e != nil {
-		f.w.Addr(fmt.Sprintf("#%d-1#0", e.OrigQ0))
+		f.w.Addr(fmt.Sprintf("%d-#0", e.OrigQ0))
 	} else {
 		f.w.Addr("1-1#0")
 	}
@@ -225,62 +226,51 @@ func (f *fileTree) plumbEventAtCurrentRoot(e *acme.Event) {
 // loop over events we get from '+dirtree' until the user closes the window
 func (f *fileTree) runEventLoop() {
 	var knownNode bool
-	var err error
 	var n *node
 
-	for e := range f.w.EventChan() {
-		switch e.C2 {
-		case 'x': // middle click in the tag
+	ef := &acorp.EventFilter{
+		Mouse2Tag: func(w *acme.Win, e *acme.Event, done func() error) error {
 			switch strings.TrimSpace(string(e.Text)) {
 			case "Del":
-				f.w.Ctl("delete")
-
+				w.Ctl("delete")
+				done()
 			case "Reset":
 				f.resetRoot(f.root)
-
 			case "Hidden":
 				f.showHidden = !f.showHidden
 				f.redraw(nil)
-
 			case "UpDir":
 				f.resetRoot(path.Dir(f.root))
-
 			default:
-				// Let acme handle it
-				f.w.WriteEvent(e)
+				return w.WriteEvent(e)
 			}
+			return nil
+		},
 
-		case 'X': // middle click in body
+		Mouse2Body: func(w *acme.Win, e *acme.Event, done func() error) error {
 			if n, knownNode = f.nodeFromEvent(e); !knownNode {
 				f.plumbEventAtCurrentRoot(e)
-				continue
 			}
-
 			if n.isDir {
 				f.resetRoot(n.fullPath)
 			}
+			return nil
+		},
 
-		case 'L': // right click in body
+		Mouse3Body: func(w *acme.Win, e *acme.Event, done func() error) error {
 			if n, knownNode = f.nodeFromEvent(e); !knownNode {
-				f.w.WriteEvent(e)
-				continue
+				w.WriteEvent(e)
 			}
-
 			if n.isDir {
 				f.toggleDirectory(n)
 				f.redraw(e)
-				continue
-			} else {
-				if err = n.plumb(); err != nil {
-					f.w.Write("error", []byte(err.Error()))
-				}
+				return nil
 			}
-
-		default:
-			f.w.WriteEvent(e)
-
-		}
+			return n.plumb()
+		},
 	}
+
+	ef.Filter(f.w)
 }
 
 // use 'sam' addressing via the addr and xdata files for this window to extract the line that
@@ -290,15 +280,15 @@ func (f *fileTree) getPath(e *acme.Event) (string, bool) {
 	// going to the character at the begining of the event selection text (#e.Orig0),
 	// jumping back to the start of the line (-) and selecting to the end (+).
 	f.w.Addr(fmt.Sprintf("#%d-+", e.OrigQ0))
-	b := make([]byte, BUFFSIZE)
+	b := make([]byte, buffSize)
 	n, _ := f.w.Read("xdata", b)
 
 	s := string(b[:n-1])
-	if len(s)-1 < SEPSIZE {
+	if len(s)-1 < sepSize {
 		return "", false
 	}
 
-	line := s[SEPSIZE:]
+	line := s[sepSize:]
 	j := 0
 
 	for i := 0; i < len(line); i++ {
@@ -308,7 +298,7 @@ func (f *fileTree) getPath(e *acme.Event) (string, bool) {
 		}
 	}
 
-	indent := len(line[:j]) / SEPSIZE
+	indent := len(line[:j]) / sepSize
 	p := []string{line[j:]}
 
 	// Now that we have the line, get it's indentation level and walk
@@ -317,10 +307,10 @@ func (f *fileTree) getPath(e *acme.Event) (string, bool) {
 		// Reverse search (-/regexp/) for the first line that is a directory
 		// (starts with -/+) and is at the correct indentation level. Then
 		// select the entire line.
-		f.w.Addr(fmt.Sprintf(`-/[\-\+] %s[^ ]+/-+`, strings.Repeat(INDENT, i)))
-		b := make([]byte, BUFFSIZE)
+		f.w.Addr(fmt.Sprintf(`-/[\-\+] %s[^ ]+/-+`, strings.Repeat(indentStr, i)))
+		b := make([]byte, buffSize)
 		n, _ := f.w.Read("xdata", b)
-		comp := strings.TrimSpace(string(b[:n-1])[SEPSIZE:])
+		comp := strings.TrimSpace(string(b[:n-1])[sepSize:])
 		p = append(p, comp)
 	}
 
