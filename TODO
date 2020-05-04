@@ -1,23 +1,5 @@
 -- TODO --
 
-* 'pick' should allow for a bunch of scripts that fuzzy search through text in
-  a window and then do something with the selected line.
-  * with that in mind, probably want to default to numbering the lines and
-    using the line index to pull out the selected line rather than using even
-    MORE string matching.
-  * Whether or not it makes more sense to use this as a stand alone program or
-    something embedded in the snooper is something I still need to work out.
-
-* I'd REALLY like to be able to intercept the keyboard event stream in order to
-  define new bindings on the fly rather than hard coding them in the source
-  of my fork (because then it makes acme-corp depended on that fork).
-  * I've been able to tail the `acme/$winid/events` file before to see the
-    keystrokes as they come through but I don't think I've been able to
-    intercept them...I'll have to see what I can do now that I can revisit it!
-  * Failing that, for things like 'pick' I'm aiming to look at instead using
-    some sort of marker (e.g. line 1 and inside brackets?) which I can tail or
-    otherwise poll in order to snarf some input to drive things if I have to.
-
 * vim style ':' to get a command line but instead just bounce focus up to the
   current window tag? This would make working quickly on common edit tasks that
   I make use of a little nicer. For example, deciding that a variable name needs
@@ -49,12 +31,6 @@
   provided that I could disable all the widgets (otherwise the window in acme
   is going to EXPLODE...!)
 
-* It might also be worthwhile wrapping up some of the more common "mid-level"
-  code I'm begining to write so that it can be re-used between different
-  utilities. The alternative is to just build binaries that provide the
-  functionality and then wrap them in scripts / shell out to them from other
-  binaries.
-  * There's pros and cons to both sides so it's worth some thought.
 
 
 -- Utility ideas --

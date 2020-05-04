@@ -32,6 +32,7 @@ const (
 var (
 	readFromStdIn = flag.Bool("s", false, "read input from stdin instead of the current acme window")
 	returnLineNum = flag.Bool("n", false, "return the line number of the selected line, not the line itself")
+	numberLines   = flag.Bool("N", false, "prefix each line with its line number")
 	prompt        = flag.String("p", "> ", "prompt to present to the user when taking input")
 )
 
@@ -173,13 +174,25 @@ func containsAll(s string, ts []string) bool {
 }
 
 func readFromAcme() ([]string, error) {
-	w, err := acorp.GetCurrentWindow()
-	if err != nil {
+	var (
+		w   *acme.Win
+		err error
+	)
+
+	if w, err = acorp.GetCurrentWindow(); err != nil {
 		return nil, err
 	}
-
 	defer w.CloseFiles()
+
 	return acorp.WindowBodyLines(w)
+}
+
+func numberedLines(lines []string) []string {
+	for ix, line := range lines {
+		lines[ix] = fmt.Sprintf("%2d | %s", ix+1, line)
+	}
+
+	return lines
 }
 
 func main() {
@@ -202,6 +215,10 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	}
+
+	if *numberLines {
+		lines = numberedLines(lines)
 	}
 
 	lp := newLinePicker(lines)

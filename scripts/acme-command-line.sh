@@ -20,6 +20,10 @@ WINID="$(echo "active / ." | nc localhost 2009)"
 # see acme(4) for details on the control files and event structure
 # NOTE: character offsets are zero indexed
 
+function windowDirectory() {
+  dirname "$(9p read "acme/$WINID/tag" | cut -d' ' -f1)"
+}
+
 function writeClickEvent() {
   local eventType=$1 offset=$2 end=$3
   9p read "acme/$WINID/tag"
@@ -56,10 +60,16 @@ function spoofClickInTag() {
 
 # == actions ==
 
-# TODO: default to prepending the current window directory if fname[0] != /
 function openInAcme() {
   local fname
   fname="$(echo "$1" | xargs)"
+
+  case $fname in
+    \~/*) fname="$HOME/${fname:2}";;
+      /*) fname=$fname;;
+       *) fname="$(windowDirectory)/$fname";;
+  esac
+
   echo "name $fname" | 9p write acme/new/ctl
   id="$(9p read acme/index | grep "$fname" | xargs | cut -d' ' -f1)"
   echo 'get' | 9p write "acme/$id/ctl"
