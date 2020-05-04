@@ -250,6 +250,7 @@ func (f *fileTree) runEventLoop() {
 		Mouse2Body: func(w *acme.Win, e *acme.Event, done func() error) error {
 			if n, knownNode = f.nodeFromEvent(e); !knownNode {
 				f.plumbEventAtCurrentRoot(e)
+				return nil
 			}
 			if n.isDir {
 				f.resetRoot(n.fullPath)
@@ -260,6 +261,7 @@ func (f *fileTree) runEventLoop() {
 		Mouse3Body: func(w *acme.Win, e *acme.Event, done func() error) error {
 			if n, knownNode = f.nodeFromEvent(e); !knownNode {
 				w.WriteEvent(e)
+				return nil
 			}
 			if n.isDir {
 				f.toggleDirectory(n)

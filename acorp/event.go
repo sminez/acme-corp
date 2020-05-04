@@ -60,14 +60,15 @@ func (ef *EventFilter) filterSingle(w *acme.Win, e *acme.Event) error {
 	case 'K':
 		switch e.C2 {
 		case 'I':
-			return ef.applyOrPassthrough(ef.KeyboardInputBody, w, e)
+			ef.applyOrPassthrough(ef.KeyboardInputBody, w, e)
 		case 'D':
-			return ef.applyOrPassthrough(ef.KeyboardDeleteBody, w, e)
+			ef.applyOrPassthrough(ef.KeyboardDeleteBody, w, e)
 		case 'i':
-			return ef.applyOrPassthrough(ef.KeyboardInputTag, w, e)
+			ef.applyOrPassthrough(ef.KeyboardInputTag, w, e)
 		case 'd':
-			return ef.applyOrPassthrough(ef.KeyboardDeleteTag, w, e)
+			ef.applyOrPassthrough(ef.KeyboardDeleteTag, w, e)
 		}
+		return nil
 
 	case 'M':
 		switch e.C2 {
