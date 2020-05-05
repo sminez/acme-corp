@@ -43,13 +43,30 @@ type fileTree struct {
 }
 
 func main() {
-	root, _ := os.Getwd()
-	if root == "/" {
-		root, _ = os.UserHomeDir()
-	}
+	root := determineRoot()
 	f := newFileTree(root)
 	f.redraw(nil)
 	f.runEventLoop()
+}
+
+func determineRoot() string {
+	cwd, _ := os.Getwd()
+
+	if len(os.Args) == 2 {
+		dir := os.Args[1]
+		if dir[0] != '/' {
+			dir, _ = filepath.Abs(dir)
+		}
+		if _, err := os.Stat(dir); !os.IsNotExist(err) {
+			return dir
+		}
+	}
+
+	if cwd == "/" {
+		cwd, _ = os.UserHomeDir()
+	}
+
+	return cwd
 }
 
 func newFileTree(root string) *fileTree {

@@ -21,7 +21,7 @@ WINID="$(echo "active / ." | nc localhost 2009)"
 # NOTE: character offsets are zero indexed
 
 function windowDirectory() {
-  dirname "$(9p read "acme/$WINID/tag" | cut -d' ' -f1)"
+  dirname "$(9p read "acme/$WINID/tag" | head -1 | cut -d' ' -f1)"
 }
 
 function writeClickEvent() {

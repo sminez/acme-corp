@@ -16,16 +16,6 @@
   * Combined with the point above about having a sort of 'command mode' similar
     to vim's Normal mode would allow me to do a lot of what I am after I think.
 
-* If the key interception stuff works then see if there is a way to get something
-  akin to vim motions working. Full blown vim editing is probably:
-    a) a giant task
-    b) not really in keeping with the spirit of things (simply `punt` to vim)
-    c) the wrong way to go about things
-  * All that said, I really do want a way to quickly select text for copying /
-    replacing similar to vim's word, to-end-of-line, paragraph, within delimiters
-    etc... style paradigm. That and being able to quickly grab a bunch of lines
-    via the keyboard (shift-V / ctrl-v) is something I'm really missing.
-
 * Maybe write my own version of `win` that can work with tab completion? This
   wouldn't work with `rc` I don't think but it would let me use zsh maybe
   provided that I could disable all the widgets (otherwise the window in acme

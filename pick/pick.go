@@ -1,16 +1,18 @@
-// pick - a minimalist input selector for the acme text editor modelled after dmenu
-//
-// If launched from within acme itself, pick will use the current acme window as defined by the 'winid'
-// environment variable. Otherwise, it will attempt to query a running snooper instance to fetch the
-// focused window id.
-// * To mimic dmenu behaviour of reading input from stdin, pass the '-s' flag.
-// * To return the index of the selected line in the input instead of the line itself, pass the '-n' flag.
-// * To override the default prompt ('> ') pass the '-p' flag followed by the string to use as the prompt.
-//
-// +pick window actions
-//   * character input will be interpreted as a regex for filtering lines
-//   * button 3: select a line to return
-//   * Return:   select the line the curesor is currently on
+/*
+pick - a minimalist input selector for the acme text editor modelled after dmenu
+
+If launched from within acme itself, pick will use the current acme window as defined by the 'winid'
+environment variable. Otherwise, it will attempt to query a running snooper instance to fetch the
+focused window id.
+  * To mimic dmenu behaviour of reading input from stdin, pass the '-s' flag.
+  * To return the index of the selected line in the input instead of the line itself, pass the '-n' flag.
+  * To override the default prompt ('> ') pass the '-p' flag followed by the string to use as the prompt.
+
++pick window actions
+  * character input will be interpreted as a regex for filtering lines
+  * button 3: select a line to return
+  * Return:   select the line the curesor is currently on
+*/
 package main
 
 import (
@@ -189,7 +191,7 @@ func readFromAcme() ([]string, error) {
 
 func numberedLines(lines []string) []string {
 	for ix, line := range lines {
-		lines[ix] = fmt.Sprintf("%2d | %s", ix+1, line)
+		lines[ix] = fmt.Sprintf("%3d | %s", ix+1, line)
 	}
 
 	return lines

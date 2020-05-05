@@ -17,8 +17,8 @@ import (
 	"9fans.net/go/acme"
 )
 
-// A Tool is a program that can rewrite source files or report
-// on errors that were encountered in the code.
+// A Tool is a program that can rewrite source files or report on errors that
+// were encountered in the code.
 type Tool struct {
 	cmd            string
 	args           []string
@@ -27,10 +27,10 @@ type Tool struct {
 	ignoreOutput   bool
 }
 
-// TODO: copy the window body to a temp file, format it there and then
-//       reload it in the window body. Probably best to set up the temp
-//       file in FileType.Reformat and then pass that in here?
-//		 >> Look at how acmego does this
+// TODO: copy the window body to a temp file, format it there and then reload it
+//       in the window body. Probably best to set up the temp file in
+//       FileType.Reformat and then pass that in here? >> Look at how acmego
+//       does this
 func (t *Tool) reformat(e *acme.LogEvent) string {
 	var args []string
 
@@ -56,9 +56,9 @@ func (t *Tool) reformat(e *acme.LogEvent) string {
 	return string(b)
 }
 
-// A FileType defines a set of Tools and an associated file type
-// to run them on. If the files support a unix shebang then we
-// try to parse that as well if the extension is missing.
+// A FileType defines a set of Tools and an associated file type to run them on.
+// If the files support a unix shebang then we try to parse that as well if the
+// extension is missing.
 type FileType struct {
 	extensions   []string
 	shebangProgs []string
@@ -107,7 +107,8 @@ func (f *FileType) Reformat(e *acme.LogEvent) string {
 		output += t.reformat(e)
 	}
 
-	w.Write("ctl", []byte("get"))
+	w.Ctl("get")
+	w.Ctl("clean")
 	return output
 }
 
