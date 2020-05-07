@@ -6,14 +6,7 @@ import (
 )
 
 var formatableTypes = []FileType{
-	golang, python, shell, rust, c, javascript, json, text,
-}
-
-var text = FileType{
-	extensions: []string{"txt", "md"},
-	Tools: []Tool{
-		Tool{cmd: "spell", args: []string{"-b"}, appendFilePath: true},
-	},
+	golang, python, shell, rust, c, javascript, json,
 }
 
 var golang = FileType{
@@ -51,7 +44,7 @@ var shell = FileType{
 	shebangProgs: []string{"bash", "sh", "zsh"},
 	Tools: []Tool{
 		// Remove trailing whitespace and whitespace only lines
-		Tool{cmd: "sed", args: []string{"-i", "s/[[:blank:]]*$//g"}, appendFilePath: true},
+		//Tool{cmd: "sed", args: []string{"-i", "s/[[:blank:]]*$//g"}, appendFilePath: true},
 		Tool{cmd: "shellcheck", args: []string{"-f", "gcc"}, appendFilePath: true},
 	},
 }
