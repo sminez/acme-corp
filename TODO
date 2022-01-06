@@ -1,33 +1,41 @@
 -- TODO --
 
+* sort out the command line script to be able to run edit commands correctly
+  * store a command history as well maybe? (just in /tmp)
+
 * Read up on, practice and then write up some more of the `sam` editing
   language. Structured regular expressions really do look wonderfully powerful
   and it would be good to be able to make proper use of them in general rather
-  than simply as heavily commented "magic" lines in a couple of the utilities.
-  * Combined with the point above about having a sort of 'command mode' similar
-    to vim's Normal mode would allow me to do a lot of what I am after I think.
+  than simply as heavily commented "magic" lines in a couple of the utilities. *
+  Combined with the point above about having a sort of 'command mode' similar to
+  vim's Normal mode would allow me to do a lot of what I am after I think.
 
 * Maybe write my own version of `win` that can work with tab completion? This
   wouldn't work with `rc` I don't think but it would let me use zsh maybe
-  provided that I could disable all the widgets (otherwise the window in acme
-  is going to EXPLODE...!)
+  provided that I could disable all the widgets (otherwise the window in acme is
+  going to EXPLODE...!)
 
+* Look at adding more keyboard shortcuts (probably simplest to compile them in but
+  it might be possible to source them dynamically from somewhere?)
 
+* Improvements to dirtree
+  * Fuzzy file search
+  * Bookmarked directories
+  * Jump to dir based on edited line 1
 
--- Utility ideas --
+* Improvements to gq
+  * better detection of indentation styles (like these nested bullet points)
 
-* Jira management
-  * actions
-    * view a sprint
-    * create tickets
-    * view my notifications and assigned tickets
-  * also want to be able to plumb open any jira ref in firefox
-  * will probably need to pull in details from the environment
+* Rework the snooper window to instead act more like a menu than a log
+  (just send the output to +Errors like everything else?)
 
-* Simple git commit creation
-  * git status to get modified / untracked files
-  * button 3 on a filename to stage
-  * button 2 to open the diff for that file in a new window
-  * commit message (summary + body) would need to be entered
-    in a specific location in the window?
-  * 'Commit' in the tag to create the commit.
+* Port over the logic in blobfish to work nicely with acme
+  * There are probably a number of things that would be nice as a modified version of 'pick'
+    that allowed for a much larger header?
+  * That or something that let you do an "info + place to type commands" type interface
+
+* Look at some other acme resources online:
+  * Setting plumber rules: (https://github.com/karahobny/acme-utils/blob/master/acme-start.sh)
+  * GitHub FS: (https://github.com/sirnewton01/ghfs)
+  * Jira client: (https://github.com/hdonnay/Jira)
+  * Github client: (https://pkg.go.dev/rsc.io/github/issue?utm_source=godoc)
