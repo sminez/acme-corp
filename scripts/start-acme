@@ -8,7 +8,7 @@ case "$(uname)" in
         ;;
     Darwin)
         # font="/mnt/font/TerminessTTFNerdFontComplete-Medium/12a/font"
-        font="/mnt/font/ProFontForPowerline/12a/font"
+        font="/mnt/font/ProFontForPowerline/14a/font"
         ;;
 esac
 

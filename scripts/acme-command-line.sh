@@ -26,7 +26,7 @@ function windowDirectory() {
 
 function writeClickEvent() {
   local eventType=$1 offset=$2 end=$3
-  9p read "acme/$WINID/tag"
+
   echo "M$eventType$offset $end"
   echo "M$eventType$offset $end" | 9p write "acme/$WINID/event"
 }
@@ -49,7 +49,7 @@ function spoofClickInTag() {
   original="$(echo "$fullTag" | cut -d'|' -f2 | xargs)"
   nChars="$(echo "$fullTag" | cut -d'|' -f1 | wc -c)"
   offset="$(( nChars + 1 ))"
-  end=$(( offset + textLen ))
+  end=$(( offset + textLen + 1 ))
 
   setTag " $text"
   writeClickEvent "$eventType" "$offset" "$end"

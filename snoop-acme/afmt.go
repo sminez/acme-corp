@@ -24,6 +24,7 @@ type Tool struct {
 	args           []string
 	outputFixer    func(string) string
 	appendFilePath bool
+	appendDirPath  bool
 	ignoreOutput   bool
 }
 
@@ -32,7 +33,7 @@ type Tool struct {
 //       FileType.Reformat and then pass that in here? >> Look at how acmego
 //       does this
 func (t *Tool) reformat(e *acme.LogEvent) string {
-	var args []string
+	args := t.args
 
 	if _, err := ioutil.ReadFile(e.Name); err != nil {
 		return err.Error()
@@ -40,11 +41,13 @@ func (t *Tool) reformat(e *acme.LogEvent) string {
 
 	if t.appendFilePath {
 		args = append(t.args, e.Name)
-	} else {
+	} else if t.appendDirPath {
 		args = append(t.args, path.Dir(e.Name))
 	}
 
-	b, _ := exec.Command(t.cmd, args...).CombinedOutput()
+	cmd := exec.Command(t.cmd, args...)
+	cmd.Dir = path.Dir(e.Name)
+	b, _ := cmd.CombinedOutput()
 	if t.ignoreOutput || len(b) == 0 {
 		return ""
 	}

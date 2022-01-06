@@ -1,14 +1,5 @@
 -- TODO --
 
-* vim style ':' to get a command line but instead just bounce focus up to the
-  current window tag? This would make working quickly on common edit tasks that
-  I make use of a little nicer. For example, deciding that a variable name needs
-  changing, wanting to quickly spell check the current word under the cursor
-  (which is particularly useful when writing comments or error messages in a
-  source file as piping the entire thing through.
-  * Having the disposible command line with history is actually really nice as
-    opposed to cluttering up the tag though.
-
 * Read up on, practice and then write up some more of the `sam` editing
   language. Structured regular expressions really do look wonderfully powerful
   and it would be good to be able to make proper use of them in general rather

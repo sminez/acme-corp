@@ -13,8 +13,8 @@ var golang = FileType{
 	extensions: []string{"go"},
 	Tools: []Tool{
 		Tool{cmd: "goimports", args: []string{"-w"}, appendFilePath: true},
-		Tool{cmd: "golint"},
-		Tool{cmd: "go", args: []string{"vet"}},
+		Tool{cmd: "golint", appendDirPath: true},
+		Tool{cmd: "go", args: []string{"vet"}, appendDirPath: true},
 	},
 }
 
@@ -36,7 +36,11 @@ var python = FileType{
 
 var rust = FileType{
 	extensions: []string{"rs"},
-	Tools:      []Tool{Tool{cmd: "rustfmt"}},
+	Tools: []Tool{
+		Tool{cmd: "cargo", args: []string{"fmt", "--"}, appendFilePath: true},
+		// Tool{cmd: "cargo", args: []string{"check"}},
+		// Tool{cmd: "cargo", args: []string{"clippy"}},
+	},
 }
 
 var shell = FileType{
