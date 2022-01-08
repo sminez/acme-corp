@@ -12,7 +12,18 @@ case "$(uname)" in
         ;;
 esac
 
+export PATH=$PATH:$PLAN9/bin
+export MANPATH=$MANPATH:$PLAN9/man
+export SHELL=rc
+
 pgrep plumber || plumber &
-SHELL=rc acme -f $font &
+
+if [ -f "$PLUMBFILE" ]; then
+	cat "$PLUMBFILE" | 9p write plumb/rules
+else
+	cat $PLAN9/plumb/basic | 9p write plumb/rules
+fi
+
+acme -f $font &
 sleep 1  # wait for acme to come up
 snoop-acme &

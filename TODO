@@ -1,8 +1,5 @@
 -- TODO --
 
-* sort out the command line script to be able to run edit commands correctly
-  * store a command history as well maybe? (just in /tmp)
-
 * Read up on, practice and then write up some more of the `sam` editing
   language. Structured regular expressions really do look wonderfully powerful
   and it would be good to be able to make proper use of them in general rather
@@ -10,29 +7,13 @@
   Combined with the point above about having a sort of 'command mode' similar to
   vim's Normal mode would allow me to do a lot of what I am after I think.
 
-* Maybe write my own version of `win` that can work with tab completion? This
-  wouldn't work with `rc` I don't think but it would let me use zsh maybe
-  provided that I could disable all the widgets (otherwise the window in acme is
-  going to EXPLODE...!)
-
-* Look at adding more keyboard shortcuts (probably simplest to compile them in but
-  it might be possible to source them dynamically from somewhere?)
-
-* Improvements to dirtree
-  * Fuzzy file search
-  * Bookmarked directories
-  * Jump to dir based on edited line 1
-
-* Improvements to gq
-  * better detection of indentation styles (like these nested bullet points)
-
-* Rework the snooper window to instead act more like a menu than a log
-  (just send the output to +Errors like everything else?)
-
 * Port over the logic in blobfish to work nicely with acme
   * There are probably a number of things that would be nice as a modified version of 'pick'
     that allowed for a much larger header?
   * That or something that let you do an "info + place to type commands" type interface
+
+
+-- TO LOOK AT --
 
 * Look at some other acme resources online:
   * Setting plumber rules: (https://github.com/karahobny/acme-utils/blob/master/acme-start.sh)
@@ -40,3 +21,39 @@
   * Jira client: (https://github.com/hdonnay/Jira)
   * Github client: (https://pkg.go.dev/rsc.io/github/issue?utm_source=godoc)
   * Script ideas: (https://github.com/ianzhang366/acmescripts)
+  * Cross platform hotkey solution? (https://github.com/golang-design/hotkey)
+    * or this (https://github.com/robotn/gohook)
+
+
+-- TO FIX / IMPROVE --
+
+* snooper
+  * rework the snooper window to instead act more like a menu than a log
+    * just send the output to +Errors like everything else
+    * show more of the available commands in the window
+      * auto add based on the handlers that are registered?
+
+* dirtree
+  * Fuzzy file search
+  * Bookmarked directories
+  * Jump to dir based on edited line 1
+  * keep focused line (where possible) when re-rendering
+
+* pick
+  * Make linePicker public so it can be used in other programs
+  * Sort results by line number when enabled
+    * Jumping to line is a little too fiddly at the moment
+
+* gq
+  * better detection of indentation styles (like these nested bullet points)
+  * auto-set line lenth based on file type
+
+* command-line
+  * rewrite as a go program
+  * Edit commands are not running correctly
+  * store a command history as well maybe?
+    * if this is integrated with the snooper then that can just be in memory
+
+* window search
+  * making this part of the snooper might be worthwhile as well?
+  * would still need a script that send the correct message to the snooper
